@@ -189,6 +189,38 @@ hiç yer almamaktadır; darboğaz gürültü değil, tek global eşiğin (≈30)
 kaçırılan hücre sayısını artırmıştır; E16'nın düşük MAE'si yine hataların birbirini götürmesinden
 kaynaklanmaktadır. Median 9×9 yaklaşık 7 kat daha yavaştır (≈76 ms).
 ### 4.3 Segmentasyon yöntemleri
+
+Segmentasyon yöntemleri ortak bir ön işlemden (Gaussian 15×15) sonra, min. alan 50 sabit
+tutularak karşılaştırılmıştır. Parametreli yöntemlerin parametreleri yalnızca geliştirme kümesinde
+taranarak seçilmiştir.
+
+| ID | Yöntem | Parametre | MAE | Bias | Kaçırılan | Bölünme | Birleşme | Fazla |
+|---|---|---|---|---|---|---|---|---|
+| E11 | Otsu (global) | otomatik | 5,5 | −5,5 | 7,9 | 2,3 | 0,0 | 0,1 |
+| E17 | Sabit eşik | T=7 | 1,7 | +1,3 | 2,0 | 0,4 | 0,0 | 2,9 |
+| E18 | Triangle | otomatik | 4,1 | +4,1 | 0,6 | 2,1 | 0,0 | 2,6 |
+| E19 | Li | otomatik | 1,8 | −0,8 | 3,3 | 1,4 | 0,0 | 1,1 |
+| E20 | Adaptif Gaussian | blok 101, C=−10 | 1,5 | −0,3 | 6,5 | 5,6 | 0,0 | 0,6 |
+| E21 | Blok Otsu 8×8 | taban 4 | **1,2** | +0,8 | **0,8** | 0,7 | 0,5 | 1,4 |
+| E22 | Blok Otsu 4×4 | taban 5 | 1,9 | −1,7 | 3,9 | 2,2 | 0,0 | 0,0 |
+
+Global Otsu dışındaki tüm yöntemler kaçırılan hücre sayısını belirgin biçimde azaltmıştır; bu,
+Bölüm 4.2'deki "darboğaz eşiktir" yorumunu doğrular. En iyi sonuç blok bazlı Otsu (8×8) ile elde
+edilmiştir: kaçırılan hücre 7,9'dan 0,8'e inmiştir. Her blokta ayrı eşik hesaplandığı için soluk
+hücre içeren bloklarda eşik düşmekte, parlak hücre içeren bloklarda yükselmektedir. Hücre
+içermeyen bloklarda Otsu gürültüyü ikiye böldüğünden taban eşik zorunludur (taban 0'da MAE > 100);
+taban değerine duyarlılık yüksektir (8×8 için taban 4: 1,2; taban 5: 3,2).
+
+Adaptif eşikleme en düşük ikinci MAE'yi vermiş, ancak tanı ölçütleri bunun hataların birbirini
+götürmesinden kaynaklandığını göstermiştir (6,5 kaçırılan, 5,6 bölünme). Her piksel kendi
+çevresinin ortalamasıyla karşılaştırıldığı için büyük ve homojen hücrelerin iç kısmı eşiğin altında
+kalmakta, hücreler halka biçimli parçalara bölünmektedir. Ayrıca en iyi C değeri taranan aralığın
+sınırındadır. Yalnızca MAE'ye göre seçim yapılsaydı bu yöntem tercih edilebilirdi; bu nedenle
+seçimde tanı ölçütleri de dikkate alınmıştır. Triangle yöntemi neredeyse tüm hücreleri bulmuş
+(0,6 kaçırılan), ancak düşük eşik nedeniyle gürültü ve parçalanma artmıştır. Sabit eşik (T=7) iyi
+sonuç vermekle birlikte, parlaklığı farklı sekanslara veya mikroskoplara genellenmesi en zayıf
+yöntemdir; Li yöntemi ise her görüntü için eşiği otomatik hesapladığından genelleme açısından
+avantajlıdır.
 ### 4.4 Morfolojik işlemler
 
 **Şekil 3.** Farklı segmentasyon ve morfolojik işlem çıktılarının karşılaştırılması.
