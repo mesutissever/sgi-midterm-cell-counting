@@ -1,0 +1,15 @@
+# Veri seti GitHub'a yüklenmez (Ödev Bölüm 18.5)
+data/
+*.zip
+*.tif
+*.tiff
+
+# Rapor çıktıları ve görselleri veri seti görüntüleri içerir (yalnızca derse teslim edilir)
+rapor/*.pdf
+rapor/*.docx
+rapor/figures/
+
+# Python / Jupyter
+.venv/
+__pycache__/
+.ipynb_checkpoints/
