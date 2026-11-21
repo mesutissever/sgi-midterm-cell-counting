@@ -100,6 +100,21 @@ analizinde dikkate alınmıştır.
 ## 3. Yöntem ve Pipeline Tasarımı (16.3)
 
 ### 3.1 Baseline yöntemi
+
+Baseline; gri seviyeli görüntüye Otsu eşikleme, ardından 8-komşuluk bağlı bileşen analizi
+uygulayıp bileşenleri sayar. Doküman izin verdiği için sabit bir minimum nesne alanı eşiği
+kullanılmış ve bu eşik yalnızca geliştirme kümesinde 0–500 piksel arasındaki 12 değer taranarak
+seçilmiştir. En düşük geliştirme MAE değeri 50 pikselde elde edilmiştir (MAE 3,4; RMSE 5,04;
+Bias −3,0; tam doğru oranı %10; ortalama süre ≈10 ms). Baseline bu haliyle sabitlenmiştir.
+
+Otsu eşiği karelere göre 30–35 arasında çıkmıştır; bu değer soluk hücrelerin parlaklık
+düzeyinin (ortanca ≈14) çok üstündedir. Filtreden önce kare başına 620–1003 bileşen oluşması,
+eşiğin soluk hücreleri tek parça yerine çok sayıda küçük parçaya böldüğünü gösterir. Görsel
+inceleme, düşük MAE'nin kısmen hataların birbirini götürmesinden kaynaklandığını ortaya
+koymuştur: t067'de sayım tam doğru (21) çıkmasına rağmen bazı soluk hücreler hiç bulunamamış,
+bazıları ise birden fazla parça olarak sayılmıştır. En büyük hata, soluk hücre oranının yüksek
+olduğu t014'te görülmüştür (10/23, hata −13). Bu nedenle deneylerde yalnızca sayım metrikleri
+değil, görsel kontrol de kullanılmıştır.
 ### 3.2 Uygulanan yöntemler ve alternatifler
 ### 3.3 Aday pipeline'lar (en az 3)
 ### 3.4 Nihai pipeline
