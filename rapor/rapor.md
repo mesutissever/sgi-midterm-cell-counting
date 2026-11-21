@@ -56,11 +56,29 @@ bulunur.
 
 ### 2.2 Rastgele seçim yöntemi ve seed
 
-Seed = 29015 + 2026 = 31041
+Seed = 29015 + 2026 = 31041. Seçim `numpy.random.default_rng(31041)` ile oluşturulan tek bir
+rastgele sayı akışıyla yapılmıştır. Önce Sekans 01'den 5 doğrulama karesi, ardından bu karelere
+en az 5 kare uzaklıktaki (iki kare arasında en az 5 kare; numara farkı ≥ 6) karelerden 10
+geliştirme karesi seçilmiştir. Sekans 02'de 3 başlangıç noktası seçilmiş ve her birinden ardışık
+5 kare alınmıştır; bloklar arasında en az 5 kare boşluk koşulu sağlanmayan çekilişler aynı akıştan
+yeniden yapılmıştır (Sekans 01: 1. denemede, Sekans 02: 3. denemede geçerli seçim). Seçim,
+algoritma geliştirmeden önce yapılmış ve ayrı bir commit ile kaydedilmiştir.
 
 ### 2.3 Seçilen görüntüler
 
 **Tablo 1.** Rastgele seçilen görüntüler ve veri grupları.
+
+| Veri grubu | Sekans | Kareler | Sayı |
+|---|---|---|---|
+| Geliştirme | 01 | 14, 41, 43, 44, 45, 46, 62, 67, 72, 85 | 10 |
+| Doğrulama | 01 | 4, 20, 32, 53, 78 | 5 |
+| Test – Blok 1 | 02 | 42–46 | 5 |
+| Test – Blok 2 | 02 | 62–66 | 5 |
+| Test – Blok 3 | 02 | 86–90 | 5 |
+
+Geliştirme kümesinin yarısı (41, 43–46) zamanca birbirine yakın karelerdir; bu durum rastgele
+seçimin sonucudur ve geliştirme kümesinin çeşitliliğini sınırlar. Doğrulama kareleri ise
+sekansın başından sonuna yayılmıştır.
 
 ### 2.4 Referans hücre sayıları
 
