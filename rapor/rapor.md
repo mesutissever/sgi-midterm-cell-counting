@@ -82,6 +82,19 @@ sekansın başından sonuna yayılmıştır.
 
 ### 2.4 Referans hücre sayıları
 
+Referans sayı, ilgili karenin `TRA` takip etiket görüntüsünde sıfır (arka plan) dışındaki
+farklı hücre kimliklerinin sayısıdır. Yalnızca geliştirme ve doğrulama karelerinin referansları
+okunmuş; test referanslarının okunması kod içinde bir kilit değişkeniyle engellenmiştir.
+Geliştirme karelerinde referans sayısı 21–24 (ort. 22,7), doğrulama karelerinde 20–24
+(ort. 22,2) arasındadır. Parçalı (birden fazla kopuk bölgeden oluşan) etiket bulunmamaktadır.
+
+Görsel kontrolde iki durum belirlenmiştir: (i) Sol kenarda sınırla kesilmiş soluk bir hücre ve
+bazı karelerde üst kenarda kısmen görünen nesneler referansta etiketlenmemiştir; bu nesneleri
+bulan bir yöntem referansa göre fazla sayım yapmış görünür. (ii) Küçük ve yoğun görünen bazı
+etiketli nesneler (ör. t020'de 22, t085'te 35) artefakt değil, `man_track.txt` soy bilgisine göre
+yeni bölünmüş yavru hücrelerdir. Referans sayılar değiştirilmeden kullanılmış, bu durumlar hata
+analizinde dikkate alınmıştır.
+
 ### 2.5 Veri gruplarının kullanım amacı
 
 ## 3. Yöntem ve Pipeline Tasarımı (16.3)
