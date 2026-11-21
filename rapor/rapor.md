@@ -159,6 +159,35 @@ alınmıştır.
 **Şekil 2.** Orijinal görüntü ve farklı yoğunluk dönüşümlerinin sonuçları; ilgili histogramlar.
 
 ### 4.2 Filtre ve kernel karşılaştırmaları
+
+Filtreler, yoğunluk dönüşümü uygulanmadan ve baseline segmentasyonu (Otsu, min. alan 50) sabit
+tutularak karşılaştırılmıştır (E08–E16). Sayım hatalarının birbirini götürmesini ayırt etmek
+için bulunan nesneler TRA etiketleriyle eşleştirilmiş; kaçırılan, bölünen ve fazla nesneler ayrı
+ayrı sayılmıştır (kare başına ortalama, referans ort. 22,7).
+
+| ID | Filtre | MAE | Bias | Ham bileşen | Kaçırılan | Bölünme |
+|---|---|---|---|---|---|---|
+| E01 | Yok | 3,4 | −3,0 | 779 | 8,2 | 5,0 |
+| E08 | Gaussian 3×3 | 4,0 | −1,8 | 175 | 8,1 | 5,9 |
+| E09 | Gaussian 5×5 | 4,1 | −2,9 | 99 | 8,3 | 5,2 |
+| E10 | Gaussian 9×9 | 4,5 | −4,1 | 42 | 8,1 | 3,7 |
+| E11 | Gaussian 15×15 | 5,5 | −5,5 | 24 | 7,9 | 2,3 |
+| E12 | Median 3×3 | 4,1 | −1,3 | 194 | 8,5 | 7,1 |
+| E13 | Median 5×5 | 3,5 | −2,9 | 88 | 8,2 | 5,1 |
+| E14 | Median 9×9 | 6,1 | −6,1 | 38 | 8,1 | 1,9 |
+| E15 | Laplacian keskinleştirme | 5,2 | −0,6 | 3231 | 11,5 | 10,5 |
+| E16 | Unsharp masking | 2,9 | −1,1 | 1392 | 9,9 | 8,1 |
+
+Kernel boyutu büyüdükçe ham bileşen sayısı 779'dan 24'e, bölünme 5,0'dan 2,3'e düşmüştür; yani
+yumuşatma gürültüyü ve soluk hücrelerin parçalanmasını büyük ölçüde gidermiştir. Buna karşın
+MAE artmıştır. Tanı ölçütleri bu çelişkiyi açıklar: kaçırılan hücre sayısı filtreden bağımsız
+olarak ≈8'de sabittir. Filtresiz durumda bu eksiklik, parçalanan hücrelerin fazla sayılmasıyla
+kısmen dengelenmekte, filtreleme parçalanmayı giderince eksik sayım açığa çıkmaktadır. Görsel
+incelemede en soluk hücreler yumuşatılmış görüntüde açıkça seçilebildiği halde Otsu maskesinde
+hiç yer almamaktadır; darboğaz gürültü değil, tek global eşiğin (≈30) bu hücrelerin parlaklığının
+üstünde kalmasıdır. Keskinleştirme filtreleri gürültüyü de güçlendirdiği için parçalanmayı ve
+kaçırılan hücre sayısını artırmıştır; E16'nın düşük MAE'si yine hataların birbirini götürmesinden
+kaynaklanmaktadır. Median 9×9 yaklaşık 7 kat daha yavaştır (≈76 ms).
 ### 4.3 Segmentasyon yöntemleri
 ### 4.4 Morfolojik işlemler
 
