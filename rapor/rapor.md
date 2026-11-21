@@ -125,6 +125,37 @@ değil, görsel kontrol de kullanılmıştır.
 
 ### 4.1 Yoğunluk dönüşümleri
 
+Yedi yoğunluk konfigürasyonu, geri kalan adımlar baseline ile aynı tutularak (Otsu, 8-komşuluk,
+min. alan 50) geliştirme kümesinde karşılaştırılmıştır (E01–E07). Her dönüşüm orijinal görüntüye
+ayrı ayrı uygulanmıştır.
+
+| ID | Dönüşüm | MAE | RMSE | Bias | Ort. Otsu eşiği |
+|---|---|---|---|---|---|
+| E01 | Orijinal | 3,4 | 5,04 | −3,0 | 31,8 |
+| E02 | Contrast stretching [0, p99,5] | **2,4** | **2,90** | −1,8 | 75,8 |
+| E03 | Gamma (γ=0,5) | 41,1 | 122,73 | +38,3 | 49,9 |
+| E04 | Logaritmik | 460,1 | 464,97 | +460,1 | 0 |
+| E05 | Histogram eşitleme | 460,1 | 464,97 | +460,1 | 0 |
+| E06 | CLAHE (clip 2, 8×8) | 4,7 | 5,54 | −4,3 | 41,1 |
+| E07 | Histogram eşleme (ref. t046) | 2,9 | 3,42 | −1,9 | 30,4 |
+
+Görsel olarak hücreleri en belirgin gösteren dönüşümler (gamma, log, histogram eşitleme) sayımı
+en çok bozan dönüşümler olmuştur. Bunun nedeni Otsu yönteminin bu dönüşümlerle etkileşimidir:
+piksellerin yaklaşık yarısı tam 0'dır; bu dönüşümler 0'ı yerinde bırakırken en küçük sıfır dışı
+değeri (3) yukarı taşır (örneğin log ile 64'e). Histogram, 0'da çok büyük bir tepe ile ondan uzak
+kalan tüm diğer değerler biçimine gelir ve Otsu eşiği 0 çıkar; böylece arka plandaki sıfır dışı
+tüm gürültü pikselleri ön plan olur (t014'te 411 nesne). Log ve histogram eşitlemenin birebir aynı
+sonucu vermesi de bundan kaynaklanır: eşik 0 olduğunda kesin artan her dönüşüm aynı maskeyi
+(orijinal > 0) üretir. Gamma'da bu durum yalnızca t014'te oluşmuştur.
+
+Contrast stretching, p99,5'in üstünü doyurarak histogram şeklini değiştirir ve Otsu eşiğini
+orijinal ölçekte düşürür; soluk hücrelerin daha fazlası yakalanmıştır (t014: 10 → 19). Histogram
+eşleme kareler arası parlaklık farkını giderdiği için en karanlık karede (t014) hatayı −13'ten −1'e
+indirmiş, diğer karelerde etkisi sınırlı kalmıştır. CLAHE arka plan gürültüsünün yerel kontrastını
+da artırdığı için Otsu eşiğini yükseltmiş ve eksik sayımı artırmıştır. Tüm konfigürasyonlarda
+soluk hücrelerin parçalı segmentasyonu devam etmektedir; bu sorun filtreleme adımında ele
+alınmıştır.
+
 **Şekil 2.** Orijinal görüntü ve farklı yoğunluk dönüşümlerinin sonuçları; ilgili histogramlar.
 
 ### 4.2 Filtre ve kernel karşılaştırmaları
