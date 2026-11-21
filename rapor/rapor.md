@@ -221,9 +221,74 @@ seçimde tanı ölçütleri de dikkate alınmıştır. Triangle yöntemi neredey
 sonuç vermekle birlikte, parlaklığı farklı sekanslara veya mikroskoplara genellenmesi en zayıf
 yöntemdir; Li yöntemi ise her görüntü için eşiği otomatik hesapladığından genelleme açısından
 avantajlıdır.
+
 ### 4.4 Morfolojik işlemler
 
-**Şekil 3.** Farklı segmentasyon ve morfolojik işlem çıktılarının karşılaştırılması.
+Morfolojik işlemler, Bölüm 4.3'ün en iyi maskesine (Gaussian 15×15 → Blok Otsu 8×8, E21)
+uygulanmıştır; önceki adımlar sabit tutulmuştur. Hücreler yuvarlak olduğundan elips biçimli
+yapılandırma elemanı, iki boyutta (5×5 ve 11×11) kullanılmıştır. Watershed için `min_distance`
+parametresi geliştirme kümesinde taranmıştır (ham maske: 10–50 aralığında MAE 13,1'den 1,4'e;
+düzeltilmiş maske: en iyi değer 25, MAE 0,7).
+
+| ID | İşlem | MAE | Bias | Kaçırılan | Bölünme | Birleşme | Fazla | Süre (ms) |
+|---|---|---|---|---|---|---|---|---|
+| E21 | Yok | 1,2 | +0,8 | 0,8 | 0,7 | 0,5 | 1,4 | 13 |
+| E23 | Erosion 5×5 | 1,1 | −0,1 | 1,3 | 0,2 | 0,5 | 1,5 | 24 |
+| E24 | Erosion 11×11 | 0,8 | +0,4 | 1,9 | 1,1 | 0,0 | 1,2 | 24 |
+| E25 | Dilation 5×5 | 2,4 | +2,4 | 0,5 | 0,4 | 0,6 | 3,1 | 24 |
+| E26 | Dilation 11×11 | 3,0 | +3,0 | 0,3 | 0,7 | 0,7 | 3,3 | 25 |
+| E27 | Opening 5×5 | 1,1 | +0,7 | 0,9 | 0,5 | 0,5 | 1,6 | 24 |
+| E28 | Opening 11×11 | 1,0 | +0,2 | 1,6 | 0,6 | 0,4 | 1,6 | 26 |
+| E29 | Closing 5×5 | 1,2 | +0,2 | 0,8 | 0,2 | 0,6 | 1,4 | 24 |
+| E30 | Closing 11×11 | 0,9 | +0,1 | 0,7 | 0,0 | 0,6 | 1,4 | 30 |
+| E31 | Opening → Closing 11×11 | 1,2 | −0,4 | 1,6 | 0,1 | 0,5 | 1,6 | 33 |
+| E32 | Closing → Opening 11×11 | 1,7 | −0,3 | 1,2 | 0,1 | 0,6 | 1,4 | 30 |
+| E33 | Delik doldurma | 1,2 | +0,8 | 0,8 | 0,7 | 0,5 | 1,4 | 62 |
+| E34 | Watershed (ham maske, md=35) | 1,4 | +1,4 | 0,8 | 1,2 | 0,4 | 1,4 | 184 |
+| E35 | Closing 11×11 → doldurma → watershed (md=25) | **0,7** | +0,7 | **0,7** | **0,0** | **0,0** | 1,4 | 222 |
+
+Temel işlemlerin etkisi beklenen yöndedir. Dilation nesneleri büyüttüğü için 50 pikselin altındaki
+gürültü lekelerini min. alan sınırının üzerine taşımış ve yakın hücreleri birleştirmiştir ("fazla"
+1,4 → 3,3; Bias +3,0). Opening küçük lekeleri silmesi beklenirken, 11×11 boyutunda soluk ve küçük
+hücreleri de silmiştir (kaçırılan 0,8 → 1,6). Closing ise hücre içindeki çatlakları kapattığından
+bölünmeyi tamamen ortadan kaldırmış (0,7 → 0,0), ancak birbirine değen hücreleri ayıramamıştır
+(birleşme 0,6).
+
+Erosion 11×11, tek başına uygulanan işlemler arasında en düşük MAE'yi (0,8) vermiştir; ancak tanı
+ölçütleri bunun yine hataların birbirini götürmesinden kaynaklandığını göstermektedir: soluk
+hücreler silinmiş (kaçırılan 1,9), bazı hücreler parçalara ayrılmıştır (bölünme 1,1). Şekil 3a'da
+t041 karesindeki iki hücrenin erosion sonrası birden fazla parçaya ayrıldığı görülmektedir. Bu
+nedenle erosion nihai seçim için uygun değildir.
+
+İşlem sırası sonucu değiştirmektedir: opening → closing MAE 1,2, closing → opening MAE 1,7
+vermiştir. Morfolojik işlemler değişmeli değildir; önce closing yapıldığında hücreler arasındaki
+dar boşluklar kapanıp nesneler birleşmekte, ardından gelen opening bu birleşmeyi geri
+alamamaktadır.
+
+Delik doldurma (E33) sayımı hiç değiştirmemiştir; çünkü bir nesnenin içindeki delik nesnenin
+bağlantılılığını, dolayısıyla bağlı bileşen sayısını etkilemez. Ancak watershed öncesinde
+önemlidir: distance transform, deliğin kenarını da arka plan kabul ettiği için delikli bir hücrede
+birden fazla tepe oluşur ve hücre bölünür. Watershed ham maskeye uygulandığında (E34) bu nedenle
+küçük `min_distance` değerlerinde aşırı bölünme görülmüş (md=10'da MAE 13,1); aşırı bölünmeyi
+önleyecek kadar büyük `min_distance` (35) seçildiğinde ise bölünme (1,2) devam etmiş, birbirine
+değen hücreler de tam ayrılamamıştır. Maske önce closing ve delik doldurma ile düzeltildiğinde
+(E35) her hücrede tek bir tepe kalmış, hücre yarıçapının yaklaşık yarısı olan `min_distance` = 25
+ile hem bölünme hem birleşme sıfıra inmiştir. Şekil 3b bu adımları t041 karesinde göstermektedir:
+Blok Otsu maskesinde delikli ve birbirine değen iki hücre, closing ve doldurmadan sonra tek bir
+"kum saati" biçimine dönüşmekte, distance transform iki ayrı tepe üretmekte, watershed iki hücreyi
+boyun noktasından ayırmaktadır.
+
+E35, MAE 0,7 ile en iyi sonucu vermiştir. Kalan hatanın büyük kısmı "fazla" nesnelerden (1,4)
+oluşmaktadır; bunlar Bölüm 2.4'te belirtilen, görüntü kenarında olup referansta işaretlenmemiş
+hücreler ve gürültü lekeleridir. Bu hata morfolojik işlemlerle giderilemez. Watershed, işlem süresini
+kare başına yaklaşık 13 ms'den 222 ms'ye çıkarmıştır; bu süre hâlâ pratik kullanım için kabul
+edilebilir düzeydedir.
+
+**Şekil 3a.** t041 karesinde birbirine değen iki hücre bölgesinde 14 morfolojik işlemin çıktısı
+(renkli: bulunan nesneler, kırmızı çizgi: referans hücre sınırları).
+
+**Şekil 3b.** Watershed adımları: (1) Blok Otsu maskesi, (2) closing 11×11 + delik doldurma,
+(3) distance transform ve tepeler, (4) watershed sonucu.
 
 ### 4.5 Kontrollü deney tablosu
 
