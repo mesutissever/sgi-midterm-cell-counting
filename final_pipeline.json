@@ -1,0 +1,48 @@
+{
+  "nihai_pipeline": "Pipeline D",
+  "deney_id": "E42",
+  "adim_sirasi": [
+    "yogunluk",
+    "filtre",
+    "esik",
+    "closing",
+    "delik_doldurma",
+    "distance_transform_watershed",
+    "baglanti_8_komsuluk",
+    "min_alan_filtresi",
+    "sayim"
+  ],
+  "parametreler": {
+    "yogunluk": "orijinal",
+    "filtre": "gaussian",
+    "filtre_boyut": 15,
+    "esik": "sabit",
+    "kapama": 11,
+    "min_distance": 25,
+    "min_alan": 100,
+    "T": 7
+  },
+  "yapilandirma_elemani": "elips",
+  "baseline": {
+    "yontem": "Global Otsu + 8-komşuluk bağlı bileşen",
+    "min_alan": 50
+  },
+  "secim_kurali": "En düşük doğrulama MAE; eşitlikte RMSE, işlem süresi, karmaşıklık",
+  "gelistirme": {
+    "MAE": 1.7,
+    "RMSE": 1.817
+  },
+  "dogrulama": {
+    "MAE": 0.8,
+    "RMSE": 1.095,
+    "ort_sure_ms": 219.0
+  },
+  "seed": 31041,
+  "ortam": {
+    "python": "3.13.1",
+    "numpy": "2.5.5",
+    "opencv": "5.1.0",
+    "scipy": "1.18.1",
+    "scikit-image": "0.26.0"
+  }
+}
