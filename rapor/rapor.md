@@ -588,9 +588,98 @@ değiştirilmemiş, diğer aday pipeline'lar da test kümesinde çalıştırılm
 
 ### 6.2 Zamansal analiz
 
+Görüntüler bir videonun kareleridir. Her test bloğu, 5 ardışık kareden oluşan ayrı bir zaman segmenti
+olarak incelenmiştir. Bireysel hücre takibi yapılmamış; ancak referanstaki her sayım değişiminin
+nedeni, TRA etiketleri ve `man_track.txt` soy ağacı kullanılarak belirlenmiştir.
+
 **Şekil 5.** Üç test bloğu için gerçek ve tahmin edilen hücre sayılarının zamansal değişimi.
 
+| Geçiş | Δ gerçek | Δ baseline | Δ nihai | Gerçek değişimin nedeni |
+|---|---|---|---|---|
+| t042→t043 | 0 | −2 | +2 | – |
+| t043→t044 | −1 | +3 | −2 | 1 hücre kayboldu |
+| t044→t045 | 0 | +1 | −1 | – |
+| t045→t046 | +2 | +5 | +2 | 1 yeni hücre girdi, 1 hücre yeniden belirdi |
+| t062→t063 | −1 | 0 | 0 | 1 hücre kayboldu |
+| t063→t064 | 0 | −5 | 0 | – |
+| t064→t065 | 0 | +6 | +1 | – |
+| t065→t066 | 0 | 0 | 0 | – |
+| t086→t087 | +1 | +6 | +2 | 1 hücre yeniden belirdi |
+| t087→t088 | 0 | −1 | −3 | – |
+| t088→t089 | −1 | −1 | 0 | 1 hücre kayboldu |
+| t089→t090 | −1 | −2 | 0 | 1 hücre kayboldu |
+
+**Gerçek sayımdaki değişimler.** Gerçek hücre sayısı bloklar içinde yavaş değişmektedir (ortalama
+|Δ| 0,25–0,75, en fazla 2). Test bloklarında hiç bölünme gerçekleşmemiştir. Değişimlerin tamamı
+hücrelerin görüntüden kaybolması (5), bir süre görünmedikten sonra yeniden belirmesi (2) ya da görüş
+alanına yeni girmesi (1) ile açıklanmaktadır. Hücreler sıvı içinde üç boyutlu hareket ettiğinden odak
+düzleminin dışına çıkıp tekrar girebilmektedir; "yeniden belirme" olayları bunun doğrudan
+göstergesidir.
+
+**Baseline'ın zamansal tutarsızlığı.** Baseline ardışık karelerde 5–6 hücrelik sıçramalar yapmaktadır
+(t063→t064: −5, t064→t065: +6, t086→t087: +6). Gerçek sayının bu kadar değişmesi biyolojik olarak
+mümkün değildir. Değişimin yönü yalnızca geçişlerin %25–75'inde gerçek değişimle uyuşmaktadır. Bu
+sıçramalar, global Otsu eşiğinin kareden kareye değişen histograma duyarlı olmasından
+kaynaklanmaktadır: eşik biraz yer değiştirdiğinde hücreler parçalanmakta ya da gürültü lekeleri
+nesne olarak sayılmaktadır.
+
+**Nihai pipeline'ın zamansal davranışı.** Nihai pipeline çok daha kararlıdır (ortalama |Δ| 0,25–1,75,
+en fazla 3). Blok 2'de tahmin neredeyse sabittir (23–24); ancak gerçek sayının 7 altında, paralel bir
+çizgi izlemektedir. Hücre kimliği bazındaki analiz, bu sabit farkın nedenini göstermektedir: bir
+karede kaçırılıp sonraki karede de bulunan 67 hücreden 66'sı (%99) sonraki karede de kaçırılmıştır.
+Hata rastgele değil sistematiktir; aynı soluk hücreler her karede kaçırılmaktadır (11 farklı hücre;
+13, 55, 61 ve 62 numaralı hücreler göründükleri her karede kaçırılmıştır). Kaçırılma, hücrelerin
+zamansal olaylarıyla da ilişkilidir. Yeniden belirdikleri ya da yeni girdikleri anda soluk olan
+hücreler (64, 66, 67) ilk karelerinden itibaren kaçırılmıştır. 20 numaralı hücre ise blok 1'de
+bulunurken t062'de kaçırılmış ve t063'te referanstan da kaybolmuştur; hücre odaktan çıkarken önce
+sönükleşmiş, sonra tamamen görünmez olmuştur.
+
+Nihai tahmindeki ani değişimler gerçek değişimlerden değil, segmentasyon hatalarından
+kaynaklanmaktadır. t043 ve t087'deki +2'lik artışlar, bir hücrenin watershed ile yanlışlıkla ikiye
+bölünmesinden ve küçük parçaların fazla nesne olarak sayılmasından kaynaklanmaktadır. t087→t088'deki
+−3'lük düşüş ise bu sahte nesnelerin ortadan kalkması ve 32 numaralı hücrenin yalnızca t088'de
+kaçırılmasıyla açıklanmaktadır.
+
+**Zamansal karar stratejisi.** Ardışık karelerdeki bilgiyi kullanmak için iki kurallı bir strateji
+tanımlanmıştır. Parametreleri test sonuçlarından değil, yalnızca Seq 01'in soy ağacından
+belirlenmiştir:
+
+1. *Tutarlılık kontrolü:* Seq 01'in 92 karesinde gerçek sayı ardışık iki kare arasında en fazla 2
+   değişmiştir (83 geçişte 0, 7 geçişte ±1, 1 geçişte −2). Bu nedenle |Δ tahmin| > 2 olan geçişler
+   "şüpheli" olarak işaretlenir ve kullanıcıya bildirilir.
+2. *Zamansal medyan:* Her karenin sayımı, kendisi ve iki komşusunun (pencere 3) medyanıyla
+   düzeltilir. Tek bir karede oluşan sahte sıçramalar bu şekilde bastırılır.
+
+Strateji test bloklarına, kilitli tahminleri değiştirmeden ayrı bir analiz olarak uygulanmıştır.
+Tutarlılık kontrolü baseline'da 5 şüpheli geçiş yakalamış, nihai pipeline'da yalnızca 1 (t087→t088).
+Zamansal medyan, tahminlerin kareden kareye titremesini belirgin biçimde azaltmıştır (ortalama |Δ|
+nihai: 1,08 → 0,33; baseline: 2,67 → 0,88; gerçek: 0,58). Ancak MAE'yi düzeltmemiştir (nihai:
+4,87 → 5,00; baseline: 8,47 → 7,83). Bu sonuç önemli bir ayrımı ortaya koymaktadır: zamansal
+yöntemler kareden kareye değişen rastgele hataları giderebilir, fakat her karede aynı hücrelerin
+kaçırılmasından doğan sistematik hatayı gideremez. Sistematik hata ancak algılama (eşikleme)
+aşamasında çözülebilir. Bu nedenle zamansal strateji, sayım doğruluğunu artıran bir yöntem olarak
+değil, segmentasyon hatalarını tespit eden ve sayım dizisini kararlı hale getiren bir kalite
+kontrol adımı olarak önerilmektedir.
+
 ### 6.3 Başarılı, hatalı ve zorlayıcı örnekler
+
+Örnek bölgeler elle değil, nesnel bir ölçütle seçilmiştir. Her referans hücrenin çevresindeki
+260×260 piksellik pencerede doğru bulunan, kaçırılan ve bölünen hücreler sayılmış; ölçüte en iyi uyan
+pencere seçilmiştir.
+
+- **Başarılı (t062):** Görüntünün üst-orta bölgesindeki 7 hücrenin tamamı tek ve doğru nesneler
+  olarak bulunmuştur. Bu hücreler yeterince parlaktır; nesne sınırları hücre sınırını yakından
+  izlemektedir. Yalnızca koyu çekirdekçiği kenara yakın olan bir hücrede sınırda küçük bir girinti
+  oluşmuş, ancak sayım etkilenmemiştir.
+- **Hatalı (t062):** Sol üst bölgedeki 4 hücrenin hiçbiri bulunamamıştır. Bu hücreler gösterim için
+  parlatılmış görüntüde düzgün, yuvarlak ve gri nesneler olarak açıkça seçilebilmektedir; yani
+  görsel olarak "zor" değildir. Tek sorunları, mutlak parlaklıklarının T = 7 eşiğinin altında
+  kalmasıdır. Bu örnek, test hatasının neredeyse tamamını oluşturan durumu temsil etmektedir.
+- **Zorlayıcı (t043):** Ortadaki hücrenin parlaklığı eşiğe çok yakındır. Bu nedenle eşikleme hücreyi
+  bütün olarak değil, düzensiz ve birbirine dar boyunlarla bağlı parçalar hâlinde yakalamış;
+  closing bu parçaları tam birleştirememiş, watershed de sonucu iki nesneye ayırmıştır. Eşiğe yakın
+  parlaklıktaki hücreler, hem kaçırılma hem de bölünme hatalarının ortak kaynağıdır. Bu durum,
+  t043'teki +2'lik sahte sıçramayı da açıklamaktadır.
 
 **Şekil 6.** Başarılı, hatalı ve zorlayıcı sayım örneklerinin karşılaştırılması.
 
