@@ -1,0 +1,3 @@
+yontem,MAE,RMSE,Bias,Exact_count_accuracy,ort_sure_ms
+Baseline,8.467,8.926,-1.267,0.0,11.485
+Nihai pipeline (Pipeline D),4.867,5.145,-4.867,0.0,222.645

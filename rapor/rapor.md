@@ -488,14 +488,103 @@ bağımsız testte ölçülecektir.
 
 **Şekil 4.** Örnek bir görüntü üzerinde nihai pipeline'ın aşama aşama çıktıları.
 
+Şekil 4, nihai pipeline'ı geliştirme karesi t041 üzerinde göstermektedir. Ham görüntü çok karanlıktır
+(hücrelerin çoğu 0–30 aralığındadır); Gaussian filtre çekirdekçik ve gürültü dokusunu yumuşatır.
+T = 7 eşiği parlak hücreleri tam olarak ayırır, ancak görüntü merkezindeki soluk bir hücre küçük
+noktalara dağılmıştır. Closing ve delik doldurma hücre içi delikleri kapatır, distance transform
+her hücrenin merkezinde tek bir tepe üretir. Sonuçta 22 hücre bulunmuştur (referans 24). Eksik
+sayımın nedeni sağ alttaki iki çok soluk hücredir. Bunlar eşiğin altında kaldığı için hiç
+algılanamamıştır (kırmızı konturlar). Merkezdeki dağınık soluk hücre ise tek bir düzensiz nesne
+olarak sayılmıştır.
+
+**Kilitleme.** Bu parametreler `final_pipeline.json` dosyasına yazılmış, nihai pipeline ve baseline
+15 test karesinde referanslar okunmadan çalıştırılmış ve tahminler `test_predictions_locked.csv`
+dosyasına kaydedilmiştir. Her iki dosya, test referansları açılmadan önce ayrı bir commit ile
+GitHub'a yüklenmiştir. Notebook yeniden çalıştırıldığında kilitli dosyaların üzerine yazılmamakta,
+yeniden hesaplanan tahminlerin kilitli değerlerle birebir aynı olduğu doğrulanmaktadır.
+
 ## 6. Bağımsız Test Sonuçları (16.6)
 
+Test referansları, kilit commit'i (`e075cc3`, 23.11.2026 13:05) GitHub'a gönderildikten sonra ilk
+kez okunmuştur. Değerlendirmede tahminler yeniden hesaplanmamış, doğrudan
+`test_predictions_locked.csv` dosyasından alınmıştır. Notebook kilit açılmadan önce dosyaların
+commit'lenmiş, değiştirilmemiş ve gönderilmiş olduğunu otomatik olarak kontrol etmektedir.
+
 **Tablo 4.** On beş test karesine ait gerçek ve tahmin edilen hücre sayıları.
+
+| Kare | Blok | Gerçek sayı | Baseline tahmini | Nihai tahmin | Baseline mutlak hata | Nihai mutlak hata |
+|---|---|---|---|---|---|---|
+| t042 | 1 | 27 | 36 | 23 | 9 | 4 |
+| t043 | 1 | 27 | 34 | 25 | 7 | 2 |
+| t044 | 1 | 26 | 37 | 23 | 11 | 3 |
+| t045 | 1 | 26 | 38 | 22 | 12 | 4 |
+| t046 | 1 | 28 | 43 | 24 | 15 | 4 |
+| t062 | 2 | 31 | 24 | 23 | 7 | 8 |
+| t063 | 2 | 30 | 24 | 23 | 6 | 7 |
+| t064 | 2 | 30 | 19 | 23 | 11 | 7 |
+| t065 | 2 | 30 | 25 | 24 | 5 | 6 |
+| t066 | 2 | 30 | 25 | 24 | 5 | 6 |
+| t086 | 3 | 29 | 18 | 25 | 11 | 4 |
+| t087 | 3 | 30 | 24 | 27 | 6 | 3 |
+| t088 | 3 | 30 | 23 | 24 | 7 | 6 |
+| t089 | 3 | 29 | 22 | 24 | 7 | 5 |
+| t090 | 3 | 28 | 20 | 24 | 8 | 4 |
 
 **Tablo 5.** Baseline ve nihai pipeline'ın test performans metrikleri (MAE, RMSE, Bias,
 Exact-count Accuracy, ortalama süre).
 
+| Yöntem | MAE | RMSE | Bias | Exact-count Accuracy | Ortalama süre (ms) |
+|---|---|---|---|---|---|
+| Baseline | 8,47 | 8,93 | −1,27 | 0,00 | 11 |
+| Nihai pipeline (D) | **4,87** | **5,14** | −4,87 | 0,00 | 223 |
+
+Nihai pipeline, test kümesinde baseline'ın hatasını %43 azaltmıştır (MAE 8,47 → 4,87; RMSE
+8,93 → 5,14). 15 karenin 11'inde nihai pipeline'ın hatası baseline'dan küçüktür; blok 2'de
+iki yöntemin MAE'si eşittir (6,8). Baseline'ın Bias değeri (−1,27) düşük görünse de bu, hataların
+birbirini götürmesinden kaynaklanmaktadır: blok 1'de 7–15 hücre fazla sayarken (gürültü ve
+parçalanma), blok 2 ve 3'te 5–11 hücre eksik saymaktadır. Nihai pipeline ise tutarlıdır: her karede
+eksik sayar ve Bias, MAE'ye eşittir. İki yöntem de hiçbir karede tam doğru sayım yapamamıştır.
+Nihai pipeline görüntü başına yaklaşık 223 ms sürmektedir; baseline'dan 20 kat yavaştır, ancak
+pratik kullanım için yeterince hızlıdır.
+
 ### 6.1 Test ve doğrulama sonuçlarının karşılaştırılması
+
+| Pipeline D | Geliştirme (10 kare) | Doğrulama (5 kare) | Test (15 kare) |
+|---|---|---|---|
+| MAE | 1,70 | 0,80 | 4,87 |
+| RMSE | 1,82 | 1,10 | 5,14 |
+| Bias | −0,70 | 0,00 | −4,87 |
+
+Test hatası doğrulama hatasının yaklaşık 6 katıdır. Tanı ölçütleri hatanın türünü açıkça
+göstermektedir: kare başına 5,7 hücre kaçırılmakta, buna karşılık bölünme (0,27), birleşme (0) ve
+fazla nesne (0,6) neredeyse hiç yoktur. Segmentasyonun şekil ve ayırma aşamaları (closing, delik
+doldurma, watershed) test kümesinde de doğru çalışmaktadır; sorun yalnızca algılama, yani eşik
+aşamasındadır.
+
+Hata analizi (notebook Bölüm 13 (c)) bunun nedenini nicel olarak ortaya koymuştur. Her referans
+hücrenin, nihai pipeline'ın eşiği uyguladığı Gaussian 15×15 sonrası görüntüdeki ortalama parlaklığı
+ölçülmüştür:
+
+| Küme | Hücre | Parlaklık medyanı | T = 7 altındaki hücre oranı | Kaçırılan oran | Görüntü p99 |
+|---|---|---|---|---|---|
+| Geliştirme (Seq 01) | 227 | 29,3 | 0,12 | 0,09 | 68,5 |
+| Doğrulama (Seq 01) | 111 | 26,9 | 0,12 | 0,09 | 67,0 |
+| Test (Seq 02) | 431 | 10,0 | 0,20 | 0,20 | 29,8 |
+
+Seq 02'nin görüntüleri Seq 01'e göre yaklaşık 2–3 kat daha karanlıktır (hücre parlaklık medyanı
+29,3'e karşı 10,0; p99 68,5'e karşı 29,8). Kaçırılan hücrelerin tamamının parlaklığı 6,5'in altındadır;
+yani her kaçırma, sabit eşiğin (T = 7) altında kalan bir hücredir. Test kümesinde T = 7'nin altındaki
+hücre oranı (%20), kaçırılan hücre oranıyla (%20) birebir örtüşmektedir. Kaçırılan hücreler görselde de
+belirgindir (Ek A): çoğu, görüntünün üst ve kenar bölgelerindeki büyük, soluk ve odak dışı görünen hücrelerdir.
+
+Bu sonuç, Bölüm 4.3 ve 5'te sınırlılık olarak belirtilen riskin gerçekleşmesidir: mutlak bir
+parlaklık değerine dayanan sabit eşik, Seq 01'in parlaklık ölçeğinde seçilmiş ve parlaklığı farklı
+bir sekansa genellenememiştir. Derste de vurgulandığı gibi, sabit eşik ancak görüntülerin
+histogramları birbirine benzetildiğinde (örneğin histogram eşleme ile) farklı görüntülere
+uygulanabilir. Doğrulama kümesi yalnızca Seq 01'den alındığı için bu farkı yakalayamamıştır;
+geliştirme ve doğrulama karelerinin aynı sekanstan gelmesi, doğrulamanın genelleme gücünü
+sınırlamıştır. Dokümanın kuralları gereği test sonuçları görüldükten sonra yöntem ve parametreler
+değiştirilmemiş, diğer aday pipeline'lar da test kümesinde çalıştırılmamıştır.
 
 ### 6.2 Zamansal analiz
 
