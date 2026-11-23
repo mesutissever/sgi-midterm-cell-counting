@@ -56,7 +56,21 @@ Notebook, ödev dokümanındaki bölüm numaralarıyla aynı sırada düzenlenmi
 
 ## Nihai Pipeline
 
-*(Doğrulama aşamasından sonra eklenecek.)*
+Dört aday pipeline arasından, doğrulama kümesinde (5 kare) en düşük MAE'yi veren **Pipeline D**
+seçilmiştir (doğrulama MAE 0,8, RMSE 1,10, kare başına ≈ 210 ms):
+
+```
+Ham görüntü
+ → Gaussian 15×15
+ → sabit eşik T = 7
+ → closing 11×11 (elips) → delik doldurma
+ → distance transform + watershed (min_distance = 25)
+ → bağlı bileşen (8-komşuluk), min. alan 100 piksel
+ → hücre sayısı
+```
+
+Bütün parametreler `final_pipeline.json` dosyasındadır. Karşılaştırma için kullanılan baseline:
+global Otsu + bağlı bileşen (min. alan 50).
 
 ## Üretilen Dosyalar
 

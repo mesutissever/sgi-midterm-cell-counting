@@ -148,6 +148,12 @@ yöntemi farklıdır. Böylece doğrulama kümesindeki fark doğrudan bu seçime
 
 ### 3.4 Nihai pipeline
 
+Doğrulama sonucunda (Bölüm 5) Pipeline D seçilmiştir:
+
+**Ham görüntü → Gaussian 15×15 → sabit eşik (T = 7) → closing 11×11 (elips) → delik doldurma →
+distance transform + watershed (`min_distance` = 25) → bağlı bileşen (8-komşuluk) → min. alan 100 →
+hücre sayısı**
+
 **Şekil 1.** Nihai görüntü işleme pipeline'ının akış diyagramı.
 
 ## 4. Deneysel Karşılaştırmalar ve Parametre Analizi (16.4)
@@ -409,12 +415,78 @@ klasik Blok Otsu korunmuş, blok sınırı yapaylığı yöntemin bir sınırlı
 
 ## 5. Doğrulama ve Nihai Yöntemin Belirlenmesi (16.5)
 
+Dört aday pipeline, geliştirme kümesinde seçilen parametreleri değiştirilmeden, daha önce hiçbir
+parametre seçiminde kullanılmamış 5 doğrulama karesinde (t004, t020, t032, t053, t078) çalıştırılmıştır.
+Seçim kuralı, sonuçlar görülmeden önce dokümana uygun olarak belirlenmiştir: en düşük doğrulama
+MAE'si; eşitlik durumunda RMSE, ardından işlem süresi ve karmaşıklık.
+
 **Tablo 3.** Aday pipeline'ların doğrulama performansları (MAE, RMSE, süre).
 
-**Şekil 4.** Örnek bir görüntü üzerinde nihai pipeline'ın aşama aşama çıktıları.
+| Pipeline | Validation MAE | Validation RMSE | Ortalama süre (ms) | Bias | Kaçırılan | Fazla | Geliştirme MAE | Seçim |
+|---|---|---|---|---|---|---|---|---|
+| A (Gaussian 15 + Blok Otsu) | 1,6 | 1,79 | 217 | +0,8 | 1,6 | 2,2 | 0,5 | |
+| B (Median 9 + Blok Otsu) | 1,2 | 1,41 | 271 | +0,8 | 1,4 | 1,6 | 0,6 | |
+| C (Gaussian 15 + Li) | 2,8 | 3,22 | 219 | −2,8 | 3,6 | 0,8 | 3,1 | |
+| **D (Gaussian 15 + sabit T=7)** | **0,8** | **1,10** | 212 | 0,0 | 2,0 | 1,6 | 1,7 | **Seçildi** |
+| Baseline (Otsu) | 3,8 | 5,39 | 10 | −2,6 | 8,6 | 0,2 | 3,4 | – |
 
-- Seçim gerekçesi
-- Seçilen bütün parametreler
+Kare bazında tahminler (referans / A / B / C / D / baseline): t004: 23 / 21 / 22 / 19 / 22 / 13;
+t020: 23 / 24 / 23 / 20 / 23 / 17; t032: 24 / 25 / 26 / 19 / 23 / 24; t053: 21 / 22 / 22 / 20 / 21 / 24;
+t078: 20 / 23 / 22 / 19 / 22 / 20.
+
+**Seçim gerekçesi.** Kural gereği en düşük doğrulama MAE'sine sahip Pipeline D (MAE 0,8; RMSE 1,10)
+nihai pipeline olarak seçilmiştir. D, RMSE ve süre açısından da adaylar arasında en iyisidir; dolayısıyla
+eşitlik kuralına başvurmaya gerek kalmamıştır. Bütün adaylar baseline'ı belirgin biçimde geçmiştir
+(MAE 3,8 → 0,8–2,8).
+
+**Geliştirme ile doğrulama arasındaki sıralama değişimi.** Geliştirme kümesinde en iyi olan A (0,5),
+doğrulamada üçüncü sıraya düşmüştür (1,6); D ise 1,7'den 0,8'e iyileşmiştir. A'nın birçok parametresi
+(blok taban eşiği, min. alan, `min_distance`) geliştirme kümesinde ayarlanmıştır ve geliştirme
+karelerinin çoğu sekansın 41–46 aralığında kümelenmiştir (Bölüm 2.3). Doğrulama kareleri ise sekansın
+farklı bölgelerinden gelmektedir. A'nın bu farkı, geliştirme kümesine aşırı uyumun (overfitting) bir
+göstergesidir ve bağımsız bir doğrulama kümesinin neden gerekli olduğunu açıkça göstermektedir.
+Blok Otsu'nun taban eşiğine yüksek duyarlılığı (Bölüm 4.3: taban 4 → 5 ile MAE 1,2 → 3,2) da bu
+kırılganlığı desteklemektedir.
+
+**Kare bazında davranış.** Tahmin çizgileri incelendiğinde D referansı en yakından izleyen adaydır;
+iki karede (t020, t053) tam doğru sayım yapmış, diğerlerinde en fazla 2 hücre sapmıştır. Pipeline C (Li)
+her karede 19–20 hücre bulmuştur; referans değiştiğinde tahmin değişmemekte, yani sistematik olarak eksik
+saymaktadır. Baseline ise 13 ile 24 arasında dalgalanarak en kararsız davranışı göstermiştir. A ve B'de
+doğrulama MAE'si geliştirme MAE'sinin 2–3 katına çıkmış, C ve D'de ise düşmüştür.
+
+**Görsel inceleme ve tanı ölçütleri.** D'nin doğrulama karelerindeki görsel çıktısı (Ek B) iki önemli
+noktayı ortaya koymuştur. Birincisi, kaçırılan hücrelerin çoğu her karede aynı bölgededir: görüntünün sağ
+alt kısmındaki çok soluk hücre grubu. Bu hücrelerin parlaklığı T = 7 eşiğinin altındadır; hücrelerin
+sıvı içinde üç boyutlu hareket ederek odak düzleminin dışına çıkmasıyla açıklanabilir. Hata rastgele
+değil sistematiktir; ardışık karelerde aynı hücreler kaçırılmaktadır. İkincisi, tam doğru sayımlar
+hatasız segmentasyon anlamına gelmemektedir. Örneğin t020'de tahmin ve referans 23'tür, ancak 3 hücre
+kaçırılmış ve 3 fazla nesne (küçük parçalar ve görüntü kenarındaki işaretlenmemiş hücre) bulunmuştur.
+Sayım doğru olsa da 6 segmentasyon hatası birbirini götürmüştür. Bu, yalnızca sayıma dayalı MAE'nin
+sınırlılığını ve tanı ölçütlerinin gerekliliğini göstermektedir.
+
+**Sınırlılıklar.** Doğrulama kümesi yalnızca 5 karedir; D ile B arasındaki fark (0,8 ve 1,2) toplamda 2
+hücreye karşılık gelir ve istatistiksel olarak güçlü bir fark değildir. Ayrıca D'nin Bias değerinin 0
+olması kısmen hataların birbirini götürmesinden kaynaklanmaktadır: kare başına 2,0 kaçırılan hücre ve
+1,6 fazla nesne vardır. Toplam yapısal hata açısından B daha temizdir. Seçim kuralının sonuçlar
+görüldükten sonra değiştirilmesi seçim yanlılığına yol açacağından kurala bağlı kalınmış, bu durum
+test sonuçlarının yorumunda dikkate alınmıştır (Bölüm 6). Sabit eşik, farklı parlaklıktaki sekanslara
+veya mikroskoplara genellenme açısından en zayıf yöntemdir (Bölüm 4.3); bu risk, Seq 02 üzerindeki
+bağımsız testte ölçülecektir.
+
+**Seçilen bütün parametreler (final_pipeline.json).**
+
+| Aşama | Yöntem | Parametre |
+|---|---|---|
+| Yoğunluk | Orijinal (dönüşüm yok) | – |
+| Filtre | Gaussian | 15×15 çekirdek, σ OpenCV varsayılanı (≈ 2,6) |
+| Segmentasyon | Sabit eşik | T = 7 (piksel > 7 → hücre) |
+| Morfoloji | Closing | 11×11 elips |
+| Delik doldurma | `binary_fill_holes` | – |
+| Nesne ayırma | Distance transform + watershed | `min_distance` = 25 |
+| Son işlem | Bağlı bileşen + min. alan | 8-komşuluk, min. alan 100 piksel |
+| Baseline | Global Otsu + bağlı bileşen | min. alan 50 piksel |
+
+**Şekil 4.** Örnek bir görüntü üzerinde nihai pipeline'ın aşama aşama çıktıları.
 
 ## 6. Bağımsız Test Sonuçları (16.6)
 
@@ -450,3 +522,6 @@ Exact-count Accuracy, ortalama süre).
 
 - Ek A: 15 test karesinin tamamının görsel sonuçları
 - Ek B: Ek deney tabloları ve şekiller
+  - B.1: Pipeline A'nın 10 geliştirme karesindeki çıktısı (notebook Bölüm 10 (b))
+  - B.2: Klasik ve interpolasyonlu Blok Otsu eşik haritaları (Bölüm 10 (c))
+  - B.3: Doğrulama tahmin grafiği ve Pipeline D'nin 5 doğrulama karesindeki çıktısı (Bölüm 11 (b))
