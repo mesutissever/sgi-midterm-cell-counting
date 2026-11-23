@@ -1,0 +1,44 @@
+deney_id,yogunluk,filtre,segmentasyon,morfoloji,parametreler,MAE,RMSE,Bias,Exact,sure_ms,dev_tahminler
+E01,Orijinal,-,Otsu,-,-; min_alan=50,3.4,5.04,-3.0,0.1,10.462,t014=10;t041=17;t043=22;t044=20;t045=21;t046=22;t062=22;t067=21;t072=20;t085=22
+E02,Contrast stretching,-,Otsu,-,"[0, p99.5] -> [0, 255]; min_alan=50",2.4,2.898,-1.8,0.2,31.57,t014=19;t041=24;t043=25;t044=20;t045=19;t046=22;t062=18;t067=21;t072=23;t085=18
+E03,Gamma,-,Otsu,-,gamma=0.5; min_alan=50,41.1,122.729,38.3,0.0,26.119,t014=411;t041=23;t043=22;t044=21;t045=22;t046=18;t062=24;t067=22;t072=22;t085=25
+E04,Logaritmik,-,Otsu,-,255*log(1+r)/log(256); min_alan=50,460.1,464.968,460.1,0.0,59.056,t014=411;t041=399;t043=503;t044=438;t045=448;t046=451;t062=452;t067=581;t072=563;t085=582
+E05,Histogram eşitleme,-,Otsu,-,-; min_alan=50,460.1,464.968,460.1,0.0,41.893,t014=411;t041=399;t043=503;t044=438;t045=448;t046=451;t062=452;t067=581;t072=563;t085=582
+E06,CLAHE,-,Otsu,-,"clipLimit=2, 8x8 blok; min_alan=50",4.7,5.541,-4.3,0.0,12.157,t014=24;t041=20;t043=16;t044=16;t045=16;t046=16;t062=16;t067=19;t072=19;t085=22
+E07,Histogram eşleme,-,Otsu,-,referans t046; min_alan=50,2.9,3.421,-1.9,0.0,30.253,t014=22;t041=17;t043=22;t044=20;t045=21;t046=22;t062=16;t067=23;t072=23;t085=22
+E08,Orijinal,Gaussian 3x3,Otsu,-,3x3; min_alan=50,4.0,5.514,-1.8,0.1,10.36,t014=9;t041=19;t043=24;t044=23;t045=20;t046=21;t062=27;t067=22;t072=19;t085=25
+E09,Orijinal,Gaussian 5x5,Otsu,-,5x5; min_alan=50,4.1,5.413,-2.9,0.0,10.96,t014=9;t041=18;t043=20;t044=21;t045=21;t046=22;t062=24;t067=22;t072=18;t085=23
+E10,Orijinal,Gaussian 9x9,Otsu,-,9x9; min_alan=50,4.5,5.683,-4.1,0.0,11.44,t014=9;t041=18;t043=20;t044=20;t045=22;t046=19;t062=23;t067=17;t072=18;t085=20
+E11,Orijinal,Gaussian 15x15,Otsu,-,15x15; min_alan=50,5.5,6.269,-5.5,0.0,11.51,t014=9;t041=18;t043=20;t044=18;t045=20;t046=20;t062=18;t067=17;t072=17;t085=15
+E12,Orijinal,Median 3x3,Otsu,-,3x3; min_alan=50,4.1,5.148,-1.3,0.0,10.756,t014=11;t041=20;t043=21;t044=18;t045=22;t046=27;t062=24;t067=27;t072=22;t085=22
+E13,Orijinal,Median 5x5,Otsu,-,5x5; min_alan=50,3.5,5.03,-2.9,0.0,12.036,t014=9;t041=22;t043=20;t044=21;t045=22;t046=21;t062=24;t067=19;t072=20;t085=20
+E14,Orijinal,Median 9x9,Otsu,-,9x9; min_alan=50,6.1,7.021,-6.1,0.0,74.31,t014=9;t041=18;t043=17;t044=17;t045=16;t046=16;t062=20;t067=18;t072=18;t085=17
+E15,Orijinal,Laplacian keskinleştirme 3x3 kernel (merkez 5),Otsu,-,3x3 kernel (merkez 5); min_alan=50,5.2,6.325,-0.6,0.2,12.636,t014=10;t041=24;t043=19;t044=18;t045=19;t046=24;t062=24;t067=29;t072=27;t085=27
+E16,Orijinal,"Unsharp masking sigma=2, miktar=1",Otsu,-,"sigma=2, miktar=1; min_alan=50",2.9,4.55,-1.1,0.3,12.156,t014=12;t041=19;t043=25;t044=24;t045=25;t046=23;t062=18;t067=28;t072=21;t085=21
+E17,Orijinal,Gaussian 15x15,Sabit eşik,-,T=7; min_alan=50,1.7,2.168,1.3,0.2,11.018,t014=23;t041=26;t043=24;t044=25;t045=23;t046=23;t062=23;t067=23;t072=25;t085=25
+E18,Orijinal,Gaussian 15x15,Triangle (global),-,otomatik; min_alan=50,4.1,4.37,4.1,0.0,13.676,t014=29;t041=28;t043=30;t044=30;t045=27;t046=28;t062=23;t067=23;t072=24;t085=26
+E19,Orijinal,Gaussian 15x15,Li (global),-,otomatik; min_alan=50,1.8,2.236,-0.8,0.2,25.999,t014=18;t041=22;t043=22;t044=25;t045=22;t046=22;t062=23;t067=23;t072=21;t085=21
+E20,Orijinal,Gaussian 15x15,Adaptif Gaussian,-,"blok=101, C=-10; min_alan=50",1.5,1.761,-0.3,0.1,37.148,t014=22;t041=24;t043=23;t044=23;t045=22;t046=25;t062=20;t067=23;t072=18;t085=24
+E21,Orijinal,Gaussian 15x15,Blok Otsu 8x8,-,taban=4; min_alan=50,1.2,1.549,0.8,0.2,13.084,t014=22;t041=25;t043=24;t044=25;t045=24;t046=23;t062=22;t067=22;t072=24;t085=24
+E22,Orijinal,Gaussian 15x15,Blok Otsu 4x4,-,taban=5; min_alan=50,1.9,2.214,-1.7,0.1,13.824,t014=20;t041=23;t043=24;t044=25;t045=23;t046=23;t062=18;t067=18;t072=18;t085=18
+E23,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Erosion 5x5,5x5; min_alan=50,1.1,1.225,-0.1,0.1,23.432,t014=22;t041=23;t043=23;t044=24;t045=22;t046=23;t062=22;t067=22;t072=23;t085=22
+E24,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Erosion 11x11,11x11; min_alan=50,0.8,1.095,0.4,0.4,24.561,t014=21;t041=26;t043=24;t044=25;t045=25;t046=25;t062=22;t067=21;t072=21;t085=21
+E25,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Dilation 5x5,5x5; min_alan=50,2.4,2.49,2.4,0.0,22.64,t014=25;t041=25;t043=27;t044=26;t045=26;t046=27;t062=23;t067=24;t072=24;t085=24
+E26,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Dilation 11x11,11x11; min_alan=50,3.0,3.194,3.0,0.1,24.655,t014=26;t041=24;t043=27;t044=27;t045=27;t046=28;t062=24;t067=24;t072=25;t085=25
+E27,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Opening 5x5,5x5; min_alan=50,1.1,1.517,0.7,0.3,23.163,t014=23;t041=24;t043=24;t044=25;t045=23;t046=23;t062=22;t067=22;t072=24;t085=24
+E28,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Opening 11x11,11x11; min_alan=50,1.0,1.265,0.2,0.3,25.537,t014=22;t041=24;t043=24;t044=23;t045=22;t046=25;t062=23;t067=22;t072=23;t085=21
+E29,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Closing 5x5,5x5; min_alan=50,1.2,1.483,0.2,0.2,23.557,t014=21;t041=24;t043=23;t044=24;t045=23;t046=23;t062=22;t067=22;t072=23;t085=24
+E30,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Closing 11x11,11x11; min_alan=50,0.9,1.049,0.1,0.2,25.495,t014=22;t041=23;t043=24;t044=24;t045=23;t046=23;t062=22;t067=22;t072=23;t085=22
+E31,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Opening -> Closing 11x11,11x11; min_alan=50,1.2,1.414,-0.4,0.2,28.852,t014=21;t041=23;t043=23;t044=22;t045=22;t046=24;t062=22;t067=22;t072=23;t085=21
+E32,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Closing -> Opening 11x11,11x11; min_alan=50,1.7,1.817,-0.3,0.0,29.372,t014=20;t041=23;t043=23;t044=22;t045=22;t046=23;t062=22;t067=23;t072=23;t085=23
+E33,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Delik doldurma -,-; min_alan=50,1.2,1.549,0.8,0.2,62.908,t014=22;t041=25;t043=24;t044=25;t045=24;t046=23;t062=22;t067=22;t072=24;t085=24
+E34,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Watershed (ham maske) min_distance=35,min_distance=35; min_alan=50,1.4,1.732,1.4,0.2,184.19,t014=23;t041=26;t043=25;t044=26;t045=25;t046=24;t062=22;t067=22;t072=24;t085=24
+E35,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),"Closing -> doldurma -> watershed 11x11, min_distance=25","11x11, min_distance=25; min_alan=50",0.7,0.949,0.7,0.4,224.331,t014=23;t041=24;t043=25;t044=25;t045=24;t046=24;t062=22;t067=22;t072=23;t085=22
+E36,Orijinal,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,0.5,0.707,0.3,0.5,229.731,t014=22;t041=24;t043=24;t044=24;t045=24;t046=24;t062=22;t067=22;t072=22;t085=22
+E37,CLAHE,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,45.7,47.688,45.7,0.0,350.047,t014=61;t041=58;t043=69;t044=56;t045=61;t046=63;t062=58;t067=79;t072=83;t085=96
+E38,Contrast stretching,Gaussian 15x15,Blok Otsu 8x8 (taban=4),Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,51.4,51.72,51.4,0.0,322.379,t014=71;t041=85;t043=75;t044=78;t045=70;t046=72;t062=84;t067=70;t072=68;t085=68
+E39,Orijinal,Gaussian 9x9,Blok Otsu 8x8 (taban=4),Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,1.2,1.414,1.2,0.1,223.379,t014=24;t041=25;t043=25;t044=26;t045=24;t046=25;t062=22;t067=22;t072=22;t085=24
+E40,Orijinal,Median 9x9,Blok Otsu 8x8 (taban=4),Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,0.6,0.894,0.6,0.5,290.443,t014=23;t041=25;t043=24;t044=24;t045=24;t046=24;t062=22;t067=22;t072=22;t085=23
+E41,Orijinal,Gaussian 15x15,Li,Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,3.1,3.564,-3.1,0.0,239.135,t014=18;t041=19;t043=19;t044=20;t045=20;t046=20;t062=20;t067=20;t072=20;t085=20
+E42,Orijinal,Gaussian 15x15,Sabit eşik T=7,Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,1.7,1.817,-0.7,0.0,222.867,t014=22;t041=22;t043=22;t044=21;t045=22;t046=22;t062=23;t067=22;t072=22;t085=22
+E43,Orijinal,Gaussian 15x15,Blok Otsu 8x8 interpolasyonlu (taban=4),Closing 11x11 -> doldurma -> watershed,min_distance=25; min_alan=100,1.1,1.449,-0.9,0.4,208.407,t014=23;t041=22;t043=22;t044=22;t045=22;t046=22;t062=21;t067=21;t072=21;t085=22

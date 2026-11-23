@@ -116,7 +116,36 @@ bazıları ise birden fazla parça olarak sayılmıştır. En büyük hata, solu
 olduğu t014'te görülmüştür (10/23, hata −13). Bu nedenle deneylerde yalnızca sayım metrikleri
 değil, görsel kontrol de kullanılmıştır.
 ### 3.2 Uygulanan yöntemler ve alternatifler
+
+Pipeline aşamaları sırasıyla incelenmiş, her aşamada önceki aşamaların en iyi seçimi sabit
+tutulmuştur (Bölüm 4.1–4.4):
+
+- **Yoğunluk dönüşümü:** contrast stretching, gamma (0,5), logaritmik dönüşüm, histogram eşitleme,
+  CLAHE, histogram eşleme.
+- **Filtre:** Gaussian (3, 5, 9, 15), median (3, 5, 9), Laplacian keskinleştirme, unsharp masking.
+- **Segmentasyon:** global Otsu, sabit eşik, Triangle, Li, adaptif Gaussian eşik, blok bazlı Otsu
+  (4×4 ve 8×8 blok, taban eşikli).
+- **Morfoloji:** erosion, dilation, opening, closing (5×5 ve 11×11 elips), iki işlem sırası, delik
+  doldurma, distance transform + watershed.
+- **Son işlem:** bağlı bileşen analizi (8-komşuluk) ve minimum alan filtresi.
+
+Bütün pipeline'lar tek bir yapılandırma sözlüğüyle tanımlanmıştır (yoğunluk, filtre türü ve boyutu,
+eşik yöntemi ve parametreleri, closing boyutu, watershed `min_distance`, min. alan). Nihai
+yapılandırma `final_pipeline.json` dosyasına bu biçimde kaydedilmiştir.
+
 ### 3.3 Aday pipeline'lar (en az 3)
+
+Dört aday pipeline oluşturulmuştur. Hepsi aynı son işlem zincirini (closing 11×11 → delik
+doldurma → watershed, `min_distance` = 25 → min. alan 100) paylaşır; yalnızca ön işlem veya eşik
+yöntemi farklıdır. Böylece doğrulama kümesindeki fark doğrudan bu seçime bağlanabilir.
+
+| Pipeline | Deney | Filtre | Eşik | Gerekçe | Geliştirme MAE |
+|---|---|---|---|---|---|
+| A | E36 | Gaussian 15×15 | Blok Otsu 8×8, taban 4 | Geliştirme kümesinde en iyi | 0,5 |
+| B | E40 | Median 9×9 | Blok Otsu 8×8, taban 4 | Kenar koruyan farklı filtre | 0,6 |
+| C | E41 | Gaussian 15×15 | Li (global) | Parametresiz eşik; genelleme | 3,1 |
+| D | E42 | Gaussian 15×15 | Sabit eşik T=7 | En basit ve en hızlı eşik | 1,7 |
+
 ### 3.4 Nihai pipeline
 
 **Şekil 1.** Nihai görüntü işleme pipeline'ının akış diyagramı.
@@ -292,9 +321,91 @@ edilebilir düzeydedir.
 
 ### 4.5 Kontrollü deney tablosu
 
+Toplam 43 deney yapılmıştır; tamamı, her deneyin 10 geliştirme karesindeki tahminleriyle birlikte
+`experiments.csv` dosyasındadır. Tablo 2'de her aşamanın temsilî deneyleri ile tam pipeline
+deneyleri verilmiştir. Bütün değerler geliştirme kümesinde hesaplanmıştır.
+
 **Tablo 2.** En az 10 deneysel konfigürasyonun yöntem, parametre ve performans karşılaştırması.
 
+| Deney ID | Yoğunluk | Filtre | Segment. | Morfoloji | Param. | Count MAE |
+|---|---|---|---|---|---|---|
+| E01 | Orijinal | – | Otsu | – | min. alan 50 | 3,4 |
+| E02 | Contrast stretching | – | Otsu | – | p99,5 → 255 | 2,4 |
+| E04 | Logaritmik | – | Otsu | – | – | 460,1 |
+| E11 | Orijinal | Gaussian 15×15 | Otsu | – | – | 5,5 |
+| E16 | Orijinal | Unsharp masking | Otsu | – | σ=2, miktar 1 | 2,9 |
+| E17 | Orijinal | Gaussian 15×15 | Sabit eşik | – | T=7 | 1,7 |
+| E19 | Orijinal | Gaussian 15×15 | Li | – | otomatik | 1,8 |
+| E20 | Orijinal | Gaussian 15×15 | Adaptif Gaussian | – | blok 101, C=−10 | 1,5 |
+| E21 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | – | taban 4 | 1,2 |
+| E24 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Erosion 11×11 | – | 0,8 |
+| E30 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Closing 11×11 | – | 0,9 |
+| E34 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Watershed (ham maske) | md=35 | 1,4 |
+| E35 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | md=25, min. alan 50 | 0,7 |
+| **E36 (A)** | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | md=25, min. alan 100 | **0,5** |
+| E37 | CLAHE | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 45,7 |
+| E38 | Contrast stretching | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 51,4 |
+| E39 | Orijinal | Gaussian 9×9 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 1,2 |
+| E40 (B) | Orijinal | Median 9×9 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 0,6 |
+| E41 (C) | Orijinal | Gaussian 15×15 | Li | Closing → doldurma → watershed | E36 ile aynı | 3,1 |
+| E42 (D) | Orijinal | Gaussian 15×15 | Sabit eşik T=7 | Closing → doldurma → watershed | E36 ile aynı | 1,7 |
+| E43 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8, interpolasyonlu | Closing → doldurma → watershed | E36 ile aynı | 1,1 |
+
 ### 4.6 Sonuçların yorumlanması
+
+**Minimum alan (E36).** E35 üzerinde 50–600 piksel aralığı taranmıştır. MAE 100–200 aralığında en
+düşüktür (0,5); eşitlik durumunda en küçük değer (100) seçilmiştir. Bu aralık veri analiziyle
+uyumludur: gürültü lekeleri 100 pikselden küçük, bölünme sonrası yavru hücreler 250–400 piksel,
+en küçük hücre 579 pikseldir. Min. alan 300 ve üzerine çıkarıldığında yavru hücreler silinmeye
+başlamış, Bias negatife dönmüştür (600'de −0,8). E36'da fazla nesne 1,4'ten 1,2'ye inmiş, buna
+karşılık kaçırılan hücre 0,7'den 0,9'a çıkmıştır; iyileşmenin bir kısmı bu nedenle hataların
+birbirini götürmesinden kaynaklanmaktadır.
+
+**Yoğunluk dönüşümlerinin tam pipeline'daki etkisi (E37, E38).** CLAHE ve contrast stretching tek
+başına global Otsu ile denendiğinde iyileşme sağlamıştı (E02: 2,4). Tam pipeline'a eklendiklerinde
+ise MAE 45–51'e çıkmıştır ve hatanın neredeyse tamamı fazla nesnedir. Bunun nedeni, blok bazlı
+Otsu'nun taban eşiğinin (4) orijinal parlaklık ölçeğinde seçilmiş mutlak bir değer olmasıdır. Bu
+dönüşümler arka plan gürültüsünü de güçlendirdiği için hücre içermeyen bloklarda gürültü taban
+eşiğin üzerine çıkmakta ve yüzlerce leke oluşmaktadır. Bu sonuç, pipeline parametrelerinin
+birbirinden bağımsız olmadığını gösterir: bir aşama değiştiğinde sonraki aşamaların parametreleri
+yeniden ayarlanmalıdır.
+
+**Filtre (E39, E40).** Gaussian 15×15 yerine 9×9 kullanıldığında MAE 1,2'ye çıkmıştır; daha az
+yumuşatılan maskede gürültü ve çatlaklar artmaktadır. Median 9×9 ile Gaussian 15×15'e çok yakın
+bir sonuç (0,6) elde edilmiştir; ancak median biraz daha fazla bölünme (0,4) ve birleşme (0,2)
+üretmiş ve daha yavaştır (296 ms'ye karşı 226 ms).
+
+**Eşik (E41, E42).** Blok Otsu yerine global eşik kullanıldığında performans belirgin biçimde
+düşmüştür. Li yöntemi soluk hücreleri kaçırmaktadır (kaçırılan 3,4; Bias −3,1). Bölüm 4.3'te
+(min. alan 50) Li'nin MAE'si 1,8 iken burada 3,1'dir: Li ile kısmen bulunan soluk hücreler küçük
+parçalar hâlinde kalmakta ve min. alan 100 tarafından silinmektedir. Sabit eşik (T=7) de 2,1
+hücre kaçırmıştır. Her iki sonuç, Bölüm 4.3'teki temel bulguyu doğrular: bu veri setinde asıl
+darboğaz eşiklemedir ve hücre parlaklıkları geniş bir aralıkta değiştiği için yerel (blok bazlı)
+eşik gereklidir.
+
+**Görsel inceleme.** Pipeline A'nın 10 geliştirme karesindeki çıktısı tek tek incelenmiştir
+(notebook Bölüm 10 (b)). Bölünme ve birleşme hiçbir karede görülmemiştir. Hataların tamamı ya
+görüntü kenarında olup referansta işaretlenmemiş hücrelerden (fazla, karelerin hepsinde 1–2) ya
+da soluk hücrelerden (kaçırılan) kaynaklanmaktadır. En zor kare t014'tür (3 kaçırılan hücre);
+baseline yöntemi de en büyük hatayı bu karede yapmıştı (Bölüm 3.1).
+
+**Blok sınırı yapaylığı (E43).** Görsel incelemede bazı hücrelerin düz bir çizgi boyunca kesildiği
+görülmüştür. Bu çizgiler blok bazlı Otsu'nun 128×128 piksellik blok sınırlarıdır: sınıra denk gelen
+soluk bir hücrenin iki yarısı farklı eşiklerle kesilmekte, eşiği yüksek bloktaki yarısı
+kaybolmaktadır. Kalan "kaçırılan" ve "fazla" hatalarının bir kısmı bu nedenle oluşmaktadır. Bu
+yapaylığı gidermek için CLAHE'de kullanılan yöntem denenmiş, blok eşikleri doğrusal interpolasyonla
+her piksele yumuşak biçimde dağıtılmıştır (E43). Beklenenin aksine sonuç kötüleşmiştir (taban 4:
+MAE 0,5 → 1,1; kaçırılan 0,9 → 2,2). İnterpolasyon soluk bir hücrenin eşiğini komşu parlak blokların
+yüksek eşiğiyle karıştırmaktadır. Klasik yöntemde ise bloğunun tamamen içinde kalan soluk hücre, o
+bloğun düşük eşiğini olduğu gibi almaktadır. Eşik haritaları ayrıca t014'teki 3 kaçırılan hücrenin
+asıl nedeninin blok sınırı olmadığını göstermiştir: bu hücreler, parlak hücrelerle aynı blokta
+bulunan çok soluk hücrelerdir. Böyle bir blokta Otsu, parlak hücreleri arka plandan ayıran yüksek bir
+eşik (≈ 20–30) seçmekte, soluk hücreler bu eşiğin altında kalmaktadır. Bu hata her iki yöntemde de
+aynıdır (iki yöntemde de 3 kaçırılan) ve daha küçük bloklar ya da hücre başına eşik gerektirir.
+Taban 5 ile MAE 0,5'e inmiş, ancak bunun arkasında
+2,2 kaçırılan ve 0,9 bölünme bulunduğu, yani hataların birbirini götürdüğü görülmüştür. Bu nedenle
+klasik Blok Otsu korunmuş, blok sınırı yapaylığı yöntemin bir sınırlılığı olarak kaydedilmiştir
+(Bölüm 7).
 
 ## 5. Doğrulama ve Nihai Yöntemin Belirlenmesi (16.5)
 
