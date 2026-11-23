@@ -2,20 +2,39 @@
 
 **Ders:** Görüntü İşleme – Yüksek Lisans Ara Sınav Projesi
 **Öğrenci:** Mesut İşsever – 264329015
-**GitHub:** *(bağlantı eklenecek)*
-
-> Taslak: Bölümler, ödev dokümanının 16. bölümündeki zorunlu yapıya göre düzenlenmiştir.
-> Her aşama tamamlandıkça ilgili bölüm doldurulacaktır. Hedef uzunluk 6–8 sayfa;
-> sığmayan tablo ve şekiller Ekler bölümüne konulacaktır.
+**GitHub:** https://github.com/mesutissever/sgi-midterm-cell-counting
 
 ---
 
 ## 1. Giriş ve Problem Tanımı (16.1)
 
-- Hücre segmentasyonu ve sayımı problemi
-- Çalışmanın amacı
-- Kullanılan klasik görüntü işleme yaklaşımlarının kısa tanıtımı
-- Çalışmanın kapsamı
+Floresan mikroskop görüntülerinde hücrelerin bölütlenmesi (segmentasyon) ve sayılması, hücre
+çoğalması, ilaç yanıtı ve hücre döngüsü gibi biyolojik süreçlerin nicel olarak izlenmesinde temel
+bir adımdır. Elle sayım zaman alıcı ve kişiden kişiye değişen bir işlemdir; bu nedenle otomatik
+sayım yöntemlerine ihtiyaç duyulur. Problem göründüğünden zordur: hücrelerin parlaklığı aynı
+görüntüde bile onlarca kat değişebilir, odak düzleminden uzaklaşan hücreler arka plana yakın
+soluklukta görünür, birbirine değen hücreler tek nesne gibi algılanabilir ve gürültü lekeleri
+hücre gibi sayılabilir. Görüntüler bir video dizisinin kareleri olduğundan sayımın zaman içinde
+tutarlı olması da beklenir.
+
+Bu çalışmanın amacı, Cell Tracking Challenge veri setlerinden Fluo-N2DH-GOWT1 üzerinde, derin
+öğrenme kullanmadan, yalnızca klasik görüntü işleme yöntemleriyle hücreleri bölütleyen ve sayan
+bir pipeline geliştirmek, bu pipeline'ı bilimsel olarak gerekçelendirilmiş bir deney düzeniyle
+seçmek ve bağımsız bir test kümesinde değerlendirmektir.
+
+Kullanılan yöntemler beş grupta toplanmıştır. **Yoğunluk dönüşümleri** (contrast stretching,
+gamma, logaritmik dönüşüm, histogram eşitleme, CLAHE, histogram eşleme) kontrastı değiştirir.
+**Uzamsal filtreler** (Gaussian, median, Laplacian keskinleştirme, unsharp masking) gürültüyü
+azaltır ya da kenarları vurgular. **Eşikleme** yöntemleri (sabit eşik, Otsu, Triangle, Li, adaptif
+ve blok bazlı eşik) hücreleri arka plandan ayırır. **Morfolojik işlemler** (erosion, dilation,
+opening, closing, delik doldurma) ikili maskeyi düzeltir. **Distance transform ile watershed** ise
+birbirine değen hücreleri ayırır. Sayım, bağlı bileşen analiziyle yapılır.
+
+Çalışmanın kapsamı kare bazında hücre sayımı ve ardışık karelerdeki sayım değişimlerinin
+analizidir; bireysel hücre takibi kapsam dışıdır. Deney düzeni üç bağımsız veri grubuna
+dayanır. Yöntemler 10 geliştirme karesinde karşılaştırılmış, aday pipeline'lar 5 doğrulama
+karesinde seçilmiştir. Seçilen yöntem, referansları kilitli tutulan farklı bir sekansın 15 test
+karesinde yalnızca bir kez değerlendirilmiştir.
 
 ## 2. Veri Seti ve Deneysel Tasarım (16.2)
 
@@ -97,6 +116,17 @@ analizinde dikkate alınmıştır.
 
 ### 2.5 Veri gruplarının kullanım amacı
 
+- **Geliştirme (10 kare, Seq 01):** Bütün yöntem karşılaştırmaları ve parametre taramaları
+  (min. alan, eşik, blok taban eşiği, `min_distance` vb.) yalnızca bu kümede yapılmıştır
+  (E01–E43).
+- **Doğrulama (5 kare, Seq 01):** Hiçbir parametre seçiminde kullanılmamıştır. Yalnızca aday
+  pipeline'ları önceden belirlenmiş bir kuralla karşılaştırmak ve nihai yöntemi seçmek için bir
+  kez kullanılmıştır.
+- **Test (15 kare, Seq 02):** Yöntem kilitlenene kadar görüntüler incelenmemiş, referanslar kod
+  içindeki bir kilitle okunamaz tutulmuştur. Nihai yöntem ve baseline bu kümede bir kez
+  çalıştırılmış, tahminler referanslar açılmadan ayrı bir commit ile kaydedilmiştir. Test kümesinin
+  farklı bir sekanstan gelmesi, yöntemin farklı çekim koşullarına genellenmesini ölçer.
+
 ## 3. Yöntem ve Pipeline Tasarımı (16.3)
 
 ### 3.1 Baseline yöntemi
@@ -155,6 +185,12 @@ distance transform + watershed (`min_distance` = 25) → bağlı bileşen (8-kom
 hücre sayısı**
 
 **Şekil 1.** Nihai görüntü işleme pipeline'ının akış diyagramı.
+
+Şekil 1'de her aşamanın parametresi ve işlevi gösterilmiştir. Gaussian filtre, eşiklemeden önce
+çekirdekçik ve gürültü dokusunu yumuşatarak hücrelerin parçalanmasını önler. Sabit eşik hücreleri
+arka plandan ayırır. Closing ve delik doldurma maskedeki çatlak ve delikleri kapatır; bu adım,
+watershed'in her hücrede tek bir tepe bulabilmesi için gereklidir (Bölüm 4.4). Watershed birbirine
+değen hücreleri ayırır, min. alan filtresi ise gürültü lekelerini ve küçük parçaları atar.
 
 ## 4. Deneysel Karşılaştırmalar ve Parametre Analizi (16.4)
 
@@ -685,16 +721,140 @@ pencere seçilmiştir.
 
 ## 7. Tartışma ve Sonuç (16.7)
 
-- Başlıca bulgular
-- Seçilen yöntemlerin avantajları ve sınırlamaları
-- Hatalı sayımların nedenleri
-- Bağımsız testte gözlenen genelleme başarısı
-- Geliştirilebilecek yönler
+### 7.1 Deneysel sonuçların tartışılması
+
+Bu bölümde, ödev dokümanının 15. bölümündeki sorular nicel sonuçlar ve görsel örnekler birlikte
+değerlendirilerek cevaplanmıştır.
+
+**1. Hangi yoğunluk dönüşümleri daha başarılı olmuştur?** Baseline ile birlikte kullanıldığında en
+başarılı dönüşüm contrast stretching olmuştur (MAE 3,4 → 2,4); histogram eşleme en karanlık karedeki
+hatayı −13'ten −1'e indirmiştir. Gamma, logaritmik dönüşüm ve histogram eşitleme görsel olarak
+hücreleri en belirgin gösteren dönüşümler olmasına rağmen sayımı en çok bozanlar olmuştur (MAE
+41–460). Bu dönüşümler, piksellerin yarısının 0 olduğu histogramda Otsu eşiğini 0'a çekmektedir
+(Şekil 2). Tam pipeline içinde ise hiçbir yoğunluk dönüşümü yarar sağlamamıştır. CLAHE ve contrast
+stretching, mutlak bir taban eşiği kullanan blok bazlı Otsu ile birleştirildiğinde arka plan
+gürültüsünü güçlendirmiş ve MAE'yi 45–51'e çıkarmıştır (E37, E38). Bir yoğunluk dönüşümünün etkisi,
+dönüşümün kendisine değil, sonraki aşamaların onunla etkileşimine bağlıdır.
+
+**2. Filtreleme ve kernel boyutu seçimi sayım hatasını nasıl değiştirmiştir?** Kernel boyutu
+büyüdükçe gürültü bileşenleri (779 → 24) ve soluk hücrelerin parçalanması (bölünme 5,0 → 2,3)
+belirgin biçimde azalmıştır. Global Otsu ile kullanıldığında MAE yine de artmıştır; çünkü filtre,
+parçalanmanın gizlediği eksik sayımı açığa çıkarmıştır (Bölüm 4.2). Yerel eşikle birlikte
+kullanıldığında ise büyük kernel açıkça yararlıdır: tam pipeline'da Gaussian 15×15 yerine 9×9
+kullanılması MAE'yi 0,5'ten 1,2'ye çıkarmıştır (E39). Keskinleştirme filtreleri gürültüyü de
+güçlendirdiği için bu veri setinde uygun değildir. Median 9×9, Gaussian 15×15'e yakın sonuç vermiş
+(E40), ancak daha yavaştır.
+
+**3. Hangi segmentasyon yaklaşımı daha başarılı olmuştur?** Geliştirme kümesinde en başarılı yöntem
+blok bazlı Otsu (8×8 blok, taban eşik 4) olmuştur; kaçırılan hücre sayısını kare başına 7,9'dan
+0,8'e indirmiştir (Bölüm 4.3). Doğrulama kümesinde ise en düşük hatayı sabit eşik vermiştir
+(MAE 0,8). Adaptif eşik düşük MAE'ye rağmen hücreleri halka biçiminde parçalamıştır. Global Otsu ve
+Triangle bu veri setinin tek tepeli, uzun kuyruklu histogramına uygun değildir. Hangi yaklaşımın
+"en başarılı" olduğu, değerlendirmenin hangi veri kümesinde yapıldığına bağlı çıkmıştır. Bu durum
+aşağıda 6. soruda tartışılmıştır.
+
+**4. Morfolojik işlemlerin sırası ve yapılandırma elemanının boyutu sonuçları nasıl etkilemiştir?**
+Büyük yapılandırma elemanı (11×11) etkileri belirginleştirmiştir. Closing bölünmeyi sıfırlamış,
+dilation fazla nesneyi artırmış, erosion ve opening soluk hücreleri silmiştir. İşlem sırası
+değişmeli değildir: opening → closing MAE 1,2, closing → opening MAE 1,7 vermiştir (Şekil 3a). En
+önemli bulgu, işlemlerin birbirini hazırlamasıdır. Delik doldurma tek başına sayımı hiç
+değiştirmemiş, ancak watershed'den önce uygulandığında aşırı bölünmeyi önlemiştir. Ham maskede
+watershed MAE 1,4 verirken, closing ve delik doldurmadan sonra 0,7 vermiş; bölünme ve birleşme
+sıfıra inmiştir (Şekil 3b).
+
+**5. Hangi işlemler ölçülebilir performans iyileşmesi sağlamıştır?** Geliştirme MAE'sindeki en
+büyük iyileşme, global eşikten yerel ya da sabit eşiğe geçişte elde edilmiştir (Gaussian 15×15 +
+Otsu 5,5 → Blok Otsu 1,2 ya da sabit eşik 1,7). Sonraki iyileşmeler daha küçüktür: closing (1,2 →
+0,9), closing + delik doldurma + watershed (0,7), min. alan 100 (0,5). Notebook Bölüm 15 (b)'deki
+iyileşme zinciri grafiği bu adımları göstermektedir. Gaussian 15×15 filtrenin global Otsu ile
+kullanıldığında MAE'yi 3,4'ten 5,5'e çıkarması dikkat çekicidir. Filtre tek başına bir kötüleşme gibi
+görünse de, yerel ya da sabit eşikle birleştiğinde en büyük iyileşmenin ön koşulu olmuştur. Sabit
+eşik yolunda ise morfoloji ve watershed geliştirme MAE'sini değiştirmemiştir (1,7 → 1,7). Ancak
+hatanın yapısını değiştirmiştir: bölünme 0,4'ten 0'a inmiş, fazla nesne 2,9'dan 1,4'e düşmüştür
+(E17 ve E42 tanı ölçütleri). Aynı MAE'nin arkasında daha temiz bir segmentasyon vardır. Bazı "iyileşmeler" ise yalnızca görünürdedir.
+Erosion 11×11 (E24) ve adaptif eşik (E20) düşük MAE vermiş, ancak tanı ölçütleri bu değerlerin
+kaçırılan ve bölünen hücrelerin birbirini götürmesinden kaynaklandığını göstermiştir. Bu nedenle
+seçimlerde yalnızca MAE'ye değil, kaçırılan, bölünme, birleşme ve fazla nesne ölçütlerine de
+bakılmıştır.
+
+**6. Doğrulamada başarılı olan yöntem testte de başarılı olmuş mudur?** Kısmen. Pipeline D,
+doğrulamada en iyi aday olmuştur (MAE 0,8), testte ise MAE 4,87 ile doğrulamanın yaklaşık 6 katı
+hata vermiştir. Hatanın türü değişmemiştir: segmentasyonun şekil ve ayırma aşamaları testte de doğru
+çalışmış (bölünme 0,27, birleşme 0), ancak kare başına 5,7 hücre kaçırılmıştır. Doğrulama kümesi
+geliştirme kümesiyle aynı sekanstan (Seq 01) geldiği için, parlaklığı yaklaşık 2–3 kat düşük olan
+Seq 02'deki bu sorunu öngörememiştir. Aynı sekanstan alınan bir doğrulama kümesi, sekans içindeki
+aşırı uyumu (Pipeline A) yakalayabilmiş, sekanslar arası genellemeyi ise ölçememiştir.
+
+**7. Nihai pipeline baseline yönteminden daha iyi sonuç vermiş midir?** Evet. Üç veri grubunun
+üçünde de nihai pipeline baseline'dan daha iyidir. MAE geliştirmede 3,4'ten 1,7'ye, doğrulamada
+3,8'den 0,8'e, testte 8,47'den 4,87'ye inmiştir. Testte hata %43 azalmış ve 15 karenin 11'inde
+daha küçük hata elde edilmiştir. Nihai pipeline zamansal olarak da çok daha tutarlıdır: ardışık
+karelerdeki ortalama değişim baseline'da 2,67, nihai pipeline'da 1,08'dir (gerçek 0,58). Bunun
+bedeli işlem süresidir: kare başına 11 ms'ye karşı 223 ms.
+
+**8. Hatalı sayımların temel nedenleri nelerdir?** (i) *Soluk ve odak dışı hücreler:* Test
+hatasının neredeyse tamamı budur. Kaçırılan bütün hücrelerin parlaklığı eşiğin (T = 7) altındadır;
+aynı hücreler ardışık karelerde %99 oranında yeniden kaçırılmaktadır (Bölüm 6.2). (ii) *Eşiğe yakın
+parlaklıktaki hücreler:* Bu hücreler düzensiz parçalar hâlinde yakalanmakta ve watershed tarafından
+bölünebilmektedir (Şekil 6, zorlayıcı örnek). (iii) *Referansta işaretlenmemiş nesneler:* Görüntü
+kenarında kesilmiş hücreler ve bazı soluk nesneler TRA'da etiketsizdir; bunlar fazla sayım olarak
+görünür. (iv) *Global eşiğin kareden kareye değişmesi (baseline):* Ardışık karelerde 5–6 hücrelik
+sahte sıçramalara yol açmaktadır.
+
+**9. Yöntemin başka mikroskobik görüntülere uygulanmasında hangi sınırlamalar ortaya çıkabilir?**
+En önemli sınırlama, nihai pipeline'ın mutlak bir parlaklık eşiğine (T = 7) dayanmasıdır. Farklı
+mikroskop, pozlama süresi, boya yoğunluğu ya da aynı deneyin farklı bir sekansı bu eşiği
+geçersiz kılar; Seq 02 bunun somut örneğidir. Diğer parametreler de hücre boyutuna bağlıdır:
+Gaussian kernel, closing elemanı, `min_distance` = 25 ve min. alan 100, bu veri setinde ≈60 piksellik
+hücre çapı için seçilmiştir. Farklı büyütme ya da farklı hücre tiplerinde yeniden ayarlanmaları
+gerekir. Yöntem iki boyutludur ve odak dışındaki hücreleri yapısı gereği kaçırır. Ayrıca yoğun
+kümelenmiş hücrelerde distance transform tabanlı watershed, birbirine çok yaklaşmış hücreleri
+ayırmakta zorlanabilir.
+
+### 7.2 Sonuç
+
+Bu çalışmada, Fluo-N2DH-GOWT1 veri setinde klasik görüntü işleme yöntemleriyle hücre sayımı için
+43 kontrollü deney yapılmış, 4 aday pipeline oluşturulmuş ve doğrulama kümesinde en düşük MAE'yi
+veren Gaussian 15×15 → sabit eşik → closing → delik doldurma → watershed → min. alan pipeline'ı
+seçilmiştir. Nihai yöntem, bağımsız testte baseline'ın hatasını %43 azaltmış ve zamansal olarak
+çok daha tutarlı sayımlar üretmiştir. Ancak farklı parlaklıktaki ikinci sekansa tam olarak
+genellenememiş ve her karede ortalama 4,9 hücre eksik saymıştır.
+
+Başlıca bulgular şöyle özetlenebilir: (1) Bu veri setinde sayım hatasının asıl kaynağı gürültü
+değil, eşikleme aşamasıdır. (2) Morfolojik işlemlerin etkisi sıralarına bağlıdır ve watershed'den
+önce maskenin düzeltilmesi gereklidir. (3) Sayıma dayalı MAE, hataların birbirini götürmesi
+nedeniyle tek başına yanıltıcı olabilir; tanı ölçütleri ve görsel inceleme gereklidir. (4)
+Geliştirme kümesinde en iyi olan yöntem doğrulamada geriye düşebilir; bağımsız doğrulama ve test
+kümeleri bu nedenle vazgeçilmezdir. (5) Zamansal yöntemler rastgele hataları bastırabilir, ancak
+sistematik eksik sayımı düzeltemez.
+
+**Geliştirilebilecek yönler.** (i) Sabit eşik, görüntüler arası parlaklık farkını gideren bir
+normalizasyonla birleştirilmelidir. Örneğin histogram eşleme (E07) ya da görüntü başına arka plan
+ve hücre parlaklığına göre ölçeklenen bir eşik kullanılabilir. Bu, derste sabit eşik için önerilen
+koşuldur ve bu çalışmadaki genelleme sorununu doğrudan hedefler. (ii) Doğrulama kümesi birden
+fazla sekanstan oluşturulursa sekanslar arası genelleme seçim aşamasında ölçülebilir. (iii) Blok
+bazlı Otsu'da daha küçük bloklar ya da hücre başına yerel eşik, parlak ve soluk hücrelerin aynı
+blokta bulunması sorununu azaltabilir. (iv) Zamansal bilgi, yalnızca sayımın düzeltilmesinde değil,
+bir karede bulunan hücrenin komşu karelerde aranmasında da kullanılabilir. Bu yaklaşım, odaktan
+geçici olarak çıkan hücrelerin kaçırılmasını azaltabilir.
 
 ## 8. Kaynakça (16.8)
 
 1. Cell Tracking Challenge, Fluo-N2DH-GOWT1 veri seti. https://celltrackingchallenge.net/2d-datasets/
-2. N. Otsu, "A Threshold Selection Method from Gray-Level Histograms," *IEEE Trans. Systems, Man, and Cybernetics*, 9(1), 62–66, 1979.
+2. V. Ulman et al., "An objective comparison of cell-tracking algorithms," *Nature Methods*, 14, 1141–1152, 2017.
+3. M. Maška et al., "A benchmark for comparison of cell tracking algorithms," *Bioinformatics*, 30(11), 1609–1617, 2014.
+4. E. Bártová et al., "Recruitment of Oct4 protein to UV-damaged chromatin in embryonic stem cells," *PLoS ONE*, 6(12), e27954, 2011.
+5. N. Otsu, "A Threshold Selection Method from Gray-Level Histograms," *IEEE Trans. Systems, Man, and Cybernetics*, 9(1), 62–66, 1979.
+6. C. H. Li and C. K. Lee, "Minimum cross entropy thresholding," *Pattern Recognition*, 26(4), 617–625, 1993.
+7. G. W. Zack, W. E. Rogers and S. A. Latt, "Automatic measurement of sister chromatid exchange frequency," *J. Histochemistry & Cytochemistry*, 25(7), 741–753, 1977.
+8. K. Zuiderveld, "Contrast Limited Adaptive Histogram Equalization," in *Graphics Gems IV*, Academic Press, 474–485, 1994.
+9. L. Vincent and P. Soille, "Watersheds in digital spaces: an efficient algorithm based on immersion simulations," *IEEE Trans. Pattern Analysis and Machine Intelligence*, 13(6), 583–598, 1991.
+10. P. Soille, *Morphological Image Analysis: Principles and Applications*, 2nd ed., Springer, 2003.
+11. R. C. Gonzalez and R. E. Woods, *Digital Image Processing*, 4th ed., Pearson, 2018.
+12. G. Bradski, "The OpenCV Library," *Dr. Dobb's Journal of Software Tools*, 2000.
+13. S. van der Walt et al., "scikit-image: image processing in Python," *PeerJ*, 2, e453, 2014.
+14. P. Virtanen et al., "SciPy 1.0: fundamental algorithms for scientific computing in Python," *Nature Methods*, 17, 261–272, 2020.
+15. C. R. Harris et al., "Array programming with NumPy," *Nature*, 585, 357–362, 2020.
 
 ## Ekler
 
