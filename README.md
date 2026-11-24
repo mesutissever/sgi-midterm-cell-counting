@@ -121,3 +121,6 @@ gönderilmeden açılmaz (Bölüm 13).
   ayrı bir commit ile kaydedilmiştir.
 - Veri setine ait görüntüler ve bunları içeren görseller repository'ye yüklenmemiştir;
   bu görseller yalnızca teknik raporda yer alır.
+- Geliştirme sırasında bazı commit'lerde notebook çıktıları veri seti görüntüleri içeriyordu.
+  Bu çıktılar repository geçmişinden temizlenmiştir. Commit'lerin içeriği, sırası ve tarihleri
+  korunmuş, yalnızca commit kimlikleri (hash) değişmiştir.

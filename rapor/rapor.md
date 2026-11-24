@@ -267,7 +267,7 @@ bir hücre noktalara dağılır. Closing ve doldurmadan sonra distance transform
 çok soluk hücredir (kırmızı konturlar).
 
 ## 6. Bağımsız Test Sonuçları
-Test referansları, kilit commit'i (`e075cc3`, 23.11.2026 13:05) GitHub'a gönderildikten sonra ilk
+Test referansları, kilit commit'i (`1b68354`, 23.11.2026 13:05) GitHub'a gönderildikten sonra ilk
 kez okunmuştur. Değerlendirmede tahminler yeniden hesaplanmamış, doğrudan
 `test_predictions_locked.csv` dosyasından alınmıştır. Notebook kilit açılmadan önce dosyaların
 commit'lenmiş, değiştirilmemiş ve gönderilmiş olduğunu otomatik olarak kontrol etmektedir.
