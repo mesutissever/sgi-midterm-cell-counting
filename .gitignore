@@ -13,3 +13,4 @@ rapor/figures/
 .venv/
 __pycache__/
 .ipynb_checkpoints/
+rapor/*.html

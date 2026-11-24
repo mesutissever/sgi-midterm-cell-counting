@@ -1,13 +1,10 @@
 # Klasik Görüntü İşleme Yöntemleriyle Mikroskobik Görüntülerde Hücre Segmentasyonu, Sayımı ve Zamansal Analizi
 
-**Ders:** Görüntü İşleme – Yüksek Lisans Ara Sınav Projesi
-**Öğrenci:** Mesut İşsever – 264329015
-**GitHub:** https://github.com/mesutissever/sgi-midterm-cell-counting
+<p style="text-align:center">Görüntü İşleme – Yüksek Lisans Ara Sınav Projesi<br>
+Mesut İşsever – 264329015<br>
+GitHub: https://github.com/mesutissever/sgi-midterm-cell-counting</p>
 
----
-
-## 1. Giriş ve Problem Tanımı (16.1)
-
+## 1. Giriş ve Problem Tanımı
 Floresan mikroskop görüntülerinde hücrelerin bölütlenmesi (segmentasyon) ve sayılması, hücre
 çoğalması, ilaç yanıtı ve hücre döngüsü gibi biyolojik süreçlerin nicel olarak izlenmesinde temel
 bir adımdır. Elle sayım zaman alıcı ve kişiden kişiye değişen bir işlemdir; bu nedenle otomatik
@@ -36,166 +33,442 @@ dayanır. Yöntemler 10 geliştirme karesinde karşılaştırılmış, aday pipe
 karesinde seçilmiştir. Seçilen yöntem, referansları kilitli tutulan farklı bir sekansın 15 test
 karesinde yalnızca bir kez değerlendirilmiştir.
 
-## 2. Veri Seti ve Deneysel Tasarım (16.2)
+## 2. Veri Seti ve Deneysel Tasarım
 
 ### 2.1 Veri setinin özellikleri
+Fluo-N2DH-GOWT1, GFP ile işaretlenmiş fare kök hücre çekirdeklerinin floresan mikroskop
+görüntülerinden oluşur [1–4]. İki sekansın (01, 02) her biri 92 kare, 1024×1024 piksel ve 8 bit gri
+seviyelidir. Referans olarak `TRA` (bütün hücreler için takip etiketleri) ve `SEG` (seçili karelerde
+manuel maskeler) kullanılmıştır. Test sızıntısını önlemek için Sekans 02'de yalnızca kare sayısı, boyut
+ve veri tipi kontrol edilmiştir. Sekans 01 analizinin bulguları şunlardır: Piksellerin %50'si tam 0,
+%99'u ≤ 68'dir. Histogram tek bir arka plan tepesi ve uzun bir kuyruktan oluşur, iki tepeli değildir.
+Hücre çapı ≈ 60 piksel, alanı 579–5306 pikseldir (ortanca 2847). Hücre parlaklığı 3,4 ile 96 arasında
+yaklaşık 28 kat değişir ve hücrelerin %37'si arka planla aynı düzeyde soluktur. Başlıca güçlükler
+dörttür: karelerin %57'sinde birbirine değen hücreler; odak dışındaki soluk hücreler; kare başına
+ortalama 2 küçük gürültü lekesi (< 100 piksel); bölgeden bölgeye değişen arka plan parlaklığı. Arka
+plan farkının soluk hücrelerin parlaklığıyla aynı mertebede olması, yerel eşiklemeyi gerekçelendirir.
 
-Fluo-N2DH-GOWT1 veri seti, GFP ile işaretlenmiş fare kök hücre çekirdeklerinin floresan
-mikroskop görüntülerinden oluşur. Eğitim arşivinde iki sekans (01 ve 02) bulunur; her biri
-92 kare (t000–t091), 1024×1024 piksel ve 8 bit (uint8) gri seviyelidir. Referans olarak
-`_GT/TRA` (tüm hücreler için takip etiketleri) ve `_GT/SEG` (seçili karelerde hassas sınırlı
-manuel maskeler) kullanılmıştır; `_ST` ve `_ERR_SEG` klasörleri kullanılmamıştır.
-Test sızıntısını önlemek için Sekans 02'de yalnızca kare sayısı, boyut ve veri tipi kontrol
-edilmiş, yoğunluk dağılımı incelenmemiştir. Aşağıdaki bulgular Sekans 01'e aittir.
-
-**Yoğunluk ve histogram.** Piksellerin %50'si tam 0, %90'ı ≤ 6, %99'u ≤ 68, %99,9'u ≤ 139'dur.
-Histogram tek bir arka plan tepesi ve uzun bir kuyruktan oluşur; nesne sınıfı için ayrı bir
-tepe yoktur (iki tepeli değildir). Histogramda yalnızca belirli gri seviyeler dolu olup
-aradaki değerler boştur (tarak yapısı); bu, görüntülerin daha düşük bir bit derinliğinden
-ölçeklendiğine işaret eder. Kare ortalama yoğunluğu 3,63–4,25, p99 değeri 61–74 arasında
-değişir ve sekans boyunca artış eğilimi gösterir.
-
-**Hücre özellikleri (01_GT/SEG, 30 kare, 144 hücre).** Hücre alanı ortanca 2847 piksel
-(579–5306), eşdeğer çap ortalama 60 pikseldir. Hücreler hafif eliptik (eccentricity ort. 0,55)
-ve dışbükeydir (solidity ort. 0,97). Ortalama hücre parlaklığı 3,4 ile 96 arasında yaklaşık
-28 kat değişir; hücrelerin %37'sinin ortalama parlaklığı ≤ 6, yani arka planın büyük kısmıyla
-aynı düzeydedir. Hücrelerin içinde sıfır yoğunluklu pikseller (çekirdekçikler ve soluk bölgeler)
-bulunur.
-
-**Olası güçlükler (Sekans 01, 92 kare).**
-- *Temas eden hücreler:* TRA etiketleri 10 piksel genişletildiğinde karelerin %57'sinde en az
-  bir birleşme oluşur (kare başına ort. 0,70, en fazla 2). Hücre ayırma yapılmazsa yalnızca bu
-  nedenle sistematik eksik sayım beklenir.
-- *Kontrast yetersizliği:* Odak düzleminden uzaklaşan hücreler arka plana yakın parlaklıktadır.
-- *Gürültü:* Hücre dışında kare başına ortalama 2 (en fazla 11) küçük parlak leke (< 100 piksel)
-  bulunur; en küçük gerçek hücre 579 pikseldir.
-- *Düzensiz arka plan:* Hücre dışı 8×8 blok ortalamaları 0,93 ile 2,70 arasında değişir;
-  sol-orta bölge belirgin biçimde daha parlaktır. Soluk hücrelerin parlaklığı (~5) ile bu
-  farkın aynı mertebede olması, global eşik yerine yerel/adaptif eşiklemeyi gerekçelendirir.
-
-### 2.2 Rastgele seçim yöntemi ve seed
-
-Seed = 29015 + 2026 = 31041. Seçim `numpy.random.default_rng(31041)` ile oluşturulan tek bir
-rastgele sayı akışıyla yapılmıştır. Önce Sekans 01'den 5 doğrulama karesi, ardından bu karelere
-en az 5 kare uzaklıktaki (iki kare arasında en az 5 kare; numara farkı ≥ 6) karelerden 10
-geliştirme karesi seçilmiştir. Sekans 02'de 3 başlangıç noktası seçilmiş ve her birinden ardışık
-5 kare alınmıştır; bloklar arasında en az 5 kare boşluk koşulu sağlanmayan çekilişler aynı akıştan
-yeniden yapılmıştır (Sekans 01: 1. denemede, Sekans 02: 3. denemede geçerli seçim). Seçim,
-algoritma geliştirmeden önce yapılmış ve ayrı bir commit ile kaydedilmiştir.
-
-### 2.3 Seçilen görüntüler
+### 2.2 Rastgele seçim yöntemi, seed ve seçilen görüntüler
+Seed = 29015 + 2026 = **31041**. Seçim, `numpy.random.default_rng(31041)` ile tek bir rastgele sayı
+akışından yapılmıştır. Önce Sekans 01'den 5 doğrulama karesi seçilmiş, ardından bunlara en az 5 kare
+uzaklıktaki karelerden 10 geliştirme karesi alınmıştır. Sekans 02'de 3 başlangıç noktasından birer
+ardışık 5 karelik blok seçilmiştir; bloklar arasında en az 5 kare boşluk koşulu sağlanmayan
+çekilişler aynı akıştan yenilenmiştir. Seçim, algoritma geliştirmeden önce yapılmış ve ayrı bir
+commit ile `selected_frames.csv` dosyasına kaydedilmiştir (Tablo 1). Geliştirme karelerinin yarısının
+(41, 43–46) zamanca yakın olması rastgele seçimin bir sonucudur ve kümenin çeşitliliğini sınırlar.
 
 **Tablo 1.** Rastgele seçilen görüntüler ve veri grupları.
 
-| Veri grubu | Sekans | Kareler | Sayı |
-|---|---|---|---|
-| Geliştirme | 01 | 14, 41, 43, 44, 45, 46, 62, 67, 72, 85 | 10 |
-| Doğrulama | 01 | 4, 20, 32, 53, 78 | 5 |
-| Test – Blok 1 | 02 | 42–46 | 5 |
-| Test – Blok 2 | 02 | 62–66 | 5 |
-| Test – Blok 3 | 02 | 86–90 | 5 |
+| Veri grubu | Sekans | Kareler | Sayı | Referans sayısı |
+|---|---|---|---|---|
+| Geliştirme | 01 | 14, 41, 43, 44, 45, 46, 62, 67, 72, 85 | 10 | 21–24 (ort. 22,7) |
+| Doğrulama | 01 | 4, 20, 32, 53, 78 | 5 | 20–24 (ort. 22,2) |
+| Test – Blok 1 / 2 / 3 | 02 | 42–46 / 62–66 / 86–90 | 15 | kilitli (Bölüm 6) |
 
-Geliştirme kümesinin yarısı (41, 43–46) zamanca birbirine yakın karelerdir; bu durum rastgele
-seçimin sonucudur ve geliştirme kümesinin çeşitliliğini sınırlar. Doğrulama kareleri ise
-sekansın başından sonuna yayılmıştır.
+### 2.3 Referans hücre sayıları ve veri gruplarının kullanımı
+Referans sayı, karenin `TRA` etiket görüntüsündeki sıfır dışı farklı hücre kimliklerinin sayısıdır.
+Görsel kontrolde iki durum belirlenmiştir. Görüntü kenarında kesilmiş bazı hücreler referansta
+etiketsizdir; bunları bulan bir yöntem fazla sayım yapmış görünür. Küçük ve yoğun görünen bazı
+etiketli nesneler ise `man_track.txt` soy bilgisine göre artefakt değil, yeni bölünmüş yavru
+hücrelerdir. Referanslar değiştirilmeden kullanılmıştır. Veri grupları şöyle kullanılmıştır:
 
-### 2.4 Referans hücre sayıları
+- **Geliştirme:** Bütün yöntem karşılaştırmaları ve parametre taramaları yalnızca bu kümede yapılmıştır (E01–E43).
+- **Doğrulama:** Hiçbir parametre seçiminde kullanılmamış; yalnızca adayları önceden belirlenmiş bir kuralla karşılaştırmak için bir kez kullanılmıştır.
+- **Test:** Yöntem kilitlenene kadar görüntüler incelenmemiş, referanslar kod içindeki bir kilitle okunamaz tutulmuştur. Tahminler referanslar açılmadan ayrı bir commit ile kaydedilmiştir. Farklı bir sekanstan gelmesi, genellemeyi ölçer.
 
-Referans sayı, ilgili karenin `TRA` takip etiket görüntüsünde sıfır (arka plan) dışındaki
-farklı hücre kimliklerinin sayısıdır. Yalnızca geliştirme ve doğrulama karelerinin referansları
-okunmuş; test referanslarının okunması kod içinde bir kilit değişkeniyle engellenmiştir.
-Geliştirme karelerinde referans sayısı 21–24 (ort. 22,7), doğrulama karelerinde 20–24
-(ort. 22,2) arasındadır. Parçalı (birden fazla kopuk bölgeden oluşan) etiket bulunmamaktadır.
-
-Görsel kontrolde iki durum belirlenmiştir: (i) Sol kenarda sınırla kesilmiş soluk bir hücre ve
-bazı karelerde üst kenarda kısmen görünen nesneler referansta etiketlenmemiştir; bu nesneleri
-bulan bir yöntem referansa göre fazla sayım yapmış görünür. (ii) Küçük ve yoğun görünen bazı
-etiketli nesneler (ör. t020'de 22, t085'te 35) artefakt değil, `man_track.txt` soy bilgisine göre
-yeni bölünmüş yavru hücrelerdir. Referans sayılar değiştirilmeden kullanılmış, bu durumlar hata
-analizinde dikkate alınmıştır.
-
-### 2.5 Veri gruplarının kullanım amacı
-
-- **Geliştirme (10 kare, Seq 01):** Bütün yöntem karşılaştırmaları ve parametre taramaları
-  (min. alan, eşik, blok taban eşiği, `min_distance` vb.) yalnızca bu kümede yapılmıştır
-  (E01–E43).
-- **Doğrulama (5 kare, Seq 01):** Hiçbir parametre seçiminde kullanılmamıştır. Yalnızca aday
-  pipeline'ları önceden belirlenmiş bir kuralla karşılaştırmak ve nihai yöntemi seçmek için bir
-  kez kullanılmıştır.
-- **Test (15 kare, Seq 02):** Yöntem kilitlenene kadar görüntüler incelenmemiş, referanslar kod
-  içindeki bir kilitle okunamaz tutulmuştur. Nihai yöntem ve baseline bu kümede bir kez
-  çalıştırılmış, tahminler referanslar açılmadan ayrı bir commit ile kaydedilmiştir. Test kümesinin
-  farklı bir sekanstan gelmesi, yöntemin farklı çekim koşullarına genellenmesini ölçer.
-
-## 3. Yöntem ve Pipeline Tasarımı (16.3)
+## 3. Yöntem ve Pipeline Tasarımı
 
 ### 3.1 Baseline yöntemi
+Baseline, gri seviyeli görüntüye global Otsu eşikleme [5], ardından 8-komşuluk bağlı bileşen analizi
+uygular. Minimum nesne alanı geliştirme kümesinde 0–500 piksel aralığında taranmış, 50 piksel
+seçilmiştir (MAE 3,4; RMSE 5,04; Bias −3,0; ≈ 10 ms). Otsu eşiği (30–35) soluk hücrelerin parlaklığının
+çok üstündedir. Bu yüzden soluk hücreler ya kaçırılmakta ya da çok sayıda parçaya bölünmektedir.
+Bazı karelerde bu iki hata birbirini götürür; örneğin t067'de sayım doğru olduğu halde segmentasyon
+hatalıdır. Bu nedenle bütün deneylerde sayım metriklerinin yanında tanı ölçütleri ve görsel kontrol
+kullanılmıştır.
 
-Baseline; gri seviyeli görüntüye Otsu eşikleme, ardından 8-komşuluk bağlı bileşen analizi
-uygulayıp bileşenleri sayar. Doküman izin verdiği için sabit bir minimum nesne alanı eşiği
-kullanılmış ve bu eşik yalnızca geliştirme kümesinde 0–500 piksel arasındaki 12 değer taranarak
-seçilmiştir. En düşük geliştirme MAE değeri 50 pikselde elde edilmiştir (MAE 3,4; RMSE 5,04;
-Bias −3,0; tam doğru oranı %10; ortalama süre ≈10 ms). Baseline bu haliyle sabitlenmiştir.
+### 3.2 Uygulanan yöntemler, alternatifler ve aday pipeline'lar
+Pipeline aşamaları sırasıyla incelenmiş, her aşamada önceki aşamaların en iyi seçimi sabit tutulmuştur:
 
-Otsu eşiği karelere göre 30–35 arasında çıkmıştır; bu değer soluk hücrelerin parlaklık
-düzeyinin (ortanca ≈14) çok üstündedir. Filtreden önce kare başına 620–1003 bileşen oluşması,
-eşiğin soluk hücreleri tek parça yerine çok sayıda küçük parçaya böldüğünü gösterir. Görsel
-inceleme, düşük MAE'nin kısmen hataların birbirini götürmesinden kaynaklandığını ortaya
-koymuştur: t067'de sayım tam doğru (21) çıkmasına rağmen bazı soluk hücreler hiç bulunamamış,
-bazıları ise birden fazla parça olarak sayılmıştır. En büyük hata, soluk hücre oranının yüksek
-olduğu t014'te görülmüştür (10/23, hata −13). Bu nedenle deneylerde yalnızca sayım metrikleri
-değil, görsel kontrol de kullanılmıştır.
-### 3.2 Uygulanan yöntemler ve alternatifler
-
-Pipeline aşamaları sırasıyla incelenmiş, her aşamada önceki aşamaların en iyi seçimi sabit
-tutulmuştur (Bölüm 4.1–4.4):
-
-- **Yoğunluk dönüşümü:** contrast stretching, gamma (0,5), logaritmik dönüşüm, histogram eşitleme,
-  CLAHE, histogram eşleme.
+- **Yoğunluk dönüşümü:** contrast stretching, gamma (0,5), logaritmik, histogram eşitleme, CLAHE [8], histogram eşleme.
 - **Filtre:** Gaussian (3, 5, 9, 15), median (3, 5, 9), Laplacian keskinleştirme, unsharp masking.
-- **Segmentasyon:** global Otsu, sabit eşik, Triangle, Li, adaptif Gaussian eşik, blok bazlı Otsu
-  (4×4 ve 8×8 blok, taban eşikli).
-- **Morfoloji:** erosion, dilation, opening, closing (5×5 ve 11×11 elips), iki işlem sırası, delik
-  doldurma, distance transform + watershed.
-- **Son işlem:** bağlı bileşen analizi (8-komşuluk) ve minimum alan filtresi.
+- **Segmentasyon:** global Otsu [5], sabit eşik, Triangle [7], Li [6], adaptif Gaussian, blok bazlı Otsu (4×4, 8×8, taban eşikli).
+- **Morfoloji:** erosion, dilation, opening, closing (5×5 ve 11×11 elips), iki işlem sırası, delik doldurma, distance transform + watershed [9, 10].
+- **Son işlem:** 8-komşuluk bağlı bileşen ve minimum alan filtresi.
 
-Bütün pipeline'lar tek bir yapılandırma sözlüğüyle tanımlanmıştır (yoğunluk, filtre türü ve boyutu,
-eşik yöntemi ve parametreleri, closing boyutu, watershed `min_distance`, min. alan). Nihai
-yapılandırma `final_pipeline.json` dosyasına bu biçimde kaydedilmiştir.
-
-### 3.3 Aday pipeline'lar (en az 3)
-
-Dört aday pipeline oluşturulmuştur. Hepsi aynı son işlem zincirini (closing 11×11 → delik
-doldurma → watershed, `min_distance` = 25 → min. alan 100) paylaşır; yalnızca ön işlem veya eşik
-yöntemi farklıdır. Böylece doğrulama kümesindeki fark doğrudan bu seçime bağlanabilir.
+Her pipeline tek bir yapılandırma sözlüğüyle tanımlanmıştır. Dört aday pipeline aynı son işlem
+zincirini paylaşır: closing 11×11 → delik doldurma → watershed (`min_distance` = 25) → min. alan 100.
+Adaylar yalnızca filtre ve eşik yöntemiyle ayrılır; doğrulamadaki fark doğrudan bu seçime
+bağlanabilir.
 
 | Pipeline | Deney | Filtre | Eşik | Gerekçe | Geliştirme MAE |
 |---|---|---|---|---|---|
 | A | E36 | Gaussian 15×15 | Blok Otsu 8×8, taban 4 | Geliştirme kümesinde en iyi | 0,5 |
-| B | E40 | Median 9×9 | Blok Otsu 8×8, taban 4 | Kenar koruyan farklı filtre | 0,6 |
-| C | E41 | Gaussian 15×15 | Li (global) | Parametresiz eşik; genelleme | 3,1 |
-| D | E42 | Gaussian 15×15 | Sabit eşik T=7 | En basit ve en hızlı eşik | 1,7 |
+| B | E40 | Median 9×9 | Blok Otsu 8×8, taban 4 | Farklı filtre türü | 0,6 |
+| C | E41 | Gaussian 15×15 | Li (global) | Parametresiz eşik | 3,1 |
+| D | E42 | Gaussian 15×15 | Sabit eşik T = 7 | En basit eşik | 1,7 |
 
-### 3.4 Nihai pipeline
+### 3.3 Nihai pipeline
+Doğrulama sonucunda (Bölüm 5) **Pipeline D** seçilmiştir (Şekil 1). Gaussian filtre çekirdekçik ve
+gürültü dokusunu yumuşatarak hücrelerin parçalanmasını önler. Sabit eşik hücreleri arka plandan
+ayırır. Closing ve delik doldurma maskedeki çatlak ve delikleri kapatır; bu, watershed'in her hücrede
+tek bir tepe bulması için gereklidir (Bölüm 4.3). Watershed birbirine değen hücreleri ayırır, min. alan
+filtresi ise gürültü lekelerini atar.
 
-Doğrulama sonucunda (Bölüm 5) Pipeline D seçilmiştir:
+<img src="figures/sekil1_pipeline.png" style="width:100%">
 
-**Ham görüntü → Gaussian 15×15 → sabit eşik (T = 7) → closing 11×11 (elips) → delik doldurma →
-distance transform + watershed (`min_distance` = 25) → bağlı bileşen (8-komşuluk) → min. alan 100 →
-hücre sayısı**
+**Şekil 1.** Nihai görüntü işleme pipeline'ının akış diyagramı (parametreler `final_pipeline.json` dosyasından).
 
-**Şekil 1.** Nihai görüntü işleme pipeline'ının akış diyagramı.
+## 4. Deneysel Karşılaştırmalar ve Parametre Analizi
 
-Şekil 1'de her aşamanın parametresi ve işlevi gösterilmiştir. Gaussian filtre, eşiklemeden önce
-çekirdekçik ve gürültü dokusunu yumuşatarak hücrelerin parçalanmasını önler. Sabit eşik hücreleri
-arka plandan ayırır. Closing ve delik doldurma maskedeki çatlak ve delikleri kapatır; bu adım,
-watershed'in her hücrede tek bir tepe bulabilmesi için gereklidir (Bölüm 4.4). Watershed birbirine
-değen hücreleri ayırır, min. alan filtresi ise gürültü lekelerini ve küçük parçaları atar.
+Deneyler, pipeline aşamaları sırasıyla ve her seferinde tek bir değişiklik yapılarak geliştirme
+kümesinde yürütülmüştür (toplam 43 deney, `experiments.csv`). Sayım hatalarının birbirini götürmesini
+ayırt etmek için bulunan nesneler TRA etiketleriyle eşleştirilmiş; MAE'nin yanında kare başına
+**kaçırılan**, **bölünen**, **birleşen** ve **fazla** nesne sayıları da hesaplanmıştır. Her aşamanın
+ayrıntılı tabloları ve analizleri Ek B'de verilmiştir; Tablo 2 temsilî deneyleri özetler.
 
-## 4. Deneysel Karşılaştırmalar ve Parametre Analizi (16.4)
+**Tablo 2.** En az 10 deneysel konfigürasyonun yöntem, parametre ve performans karşılaştırması (geliştirme kümesi; tamamı `experiments.csv` ve Ek B'de; G15: Gaussian 15×15, BO8: blok Otsu 8×8 taban 4, C+D+W: closing 11×11 → delik doldurma → watershed).
 
-### 4.1 Yoğunluk dönüşümleri
+| Deney ID | Yoğunluk | Filtre | Segment. | Morfoloji | Param. | Count MAE |
+|---|---|---|---|---|---|---|
+| E01 (baseline) | Orijinal | – | Otsu | – | min. alan 50 | 3,4 |
+| E02 | Contrast stretching | – | Otsu | – | [0, p99,5] | 2,4 |
+| E11 | Orijinal | G15 | Otsu | – | – | 5,5 |
+| E17 | Orijinal | G15 | Sabit eşik | – | T=7 | 1,7 |
+| E19 | Orijinal | G15 | Li | – | otomatik | 1,8 |
+| E20 | Orijinal | G15 | Adaptif Gauss. | – | blok 101, C=−10 | 1,5 |
+| E21 | Orijinal | G15 | BO8 | – | – | 1,2 |
+| E24 | Orijinal | G15 | BO8 | Erosion 11×11 | – | 0,8 |
+| E30 | Orijinal | G15 | BO8 | Closing 11×11 | – | 0,9 |
+| E35 | Orijinal | G15 | BO8 | C+D+W | md=25, min. alan 50 | 0,7 |
+| **E36 (A)** | Orijinal | G15 | BO8 | C+D+W | md=25, min. alan 100 | **0,5** |
+| E37 | CLAHE | G15 | BO8 | C+D+W | E36 ile aynı | 45,7 |
+| E40 (B) | Orijinal | Median 9×9 | BO8 | C+D+W | E36 ile aynı | 0,6 |
+| E41 (C) | Orijinal | G15 | Li | C+D+W | E36 ile aynı | 3,1 |
+| **E42 (D)** | Orijinal | G15 | Sabit eşik | C+D+W | T=7, E36 ile aynı | 1,7 |
+| E43 | Orijinal | G15 | BO8 interpolasyonlu | C+D+W | E36 ile aynı | 1,1 |
 
+### 4.1 Yoğunluk dönüşümleri ve filtreler
+
+Baseline ile birlikte en iyi yoğunluk dönüşümü contrast stretching olmuştur (MAE 3,4 → 2,4).
+Görsel olarak hücreleri en belirgin gösteren gamma, logaritmik dönüşüm ve histogram eşitleme ise
+sayımı en çok bozmuştur (MAE 41–460). Piksellerin yarısı tam 0 olduğundan bu dönüşümler histogramı
+0'daki dev bir tepe ve ondan uzak bir kuyruk biçimine getirmekte, Otsu eşiği 0'a düşmekte ve arka
+plandaki bütün gürültü ön plan olmaktadır (Şekil 2, t014'te 411 nesne). Filtrelerde kernel boyutu
+büyüdükçe gürültü bileşenleri 779'dan 24'e, soluk hücrelerin parçalanması (bölünme) 5,0'dan 2,3'e
+düşmüş, ancak MAE artmıştır. Tanı ölçütleri nedeni göstermiştir: kaçırılan hücre sayısı filtreden
+bağımsız olarak ≈ 8'dir. Filtresiz durumda bu eksiklik parçalanan hücrelerin fazla sayılmasıyla
+gizlenmekte, yumuşatma bunu açığa çıkarmaktadır. **Darboğaz gürültü değil, tek bir global eşiğin
+(≈ 30) soluk hücrelerin parlaklığının üstünde kalmasıdır.** Keskinleştirme filtreleri gürültüyü de
+güçlendirdiğinden bu veri setine uygun değildir.
+
+<img src="figures/sekil2_yogunluk.png" style="width:92%">
+
+**Şekil 2.** t014 karesinde orijinal görüntü ve altı yoğunluk dönüşümü (üst), log ölçekli histogramlar
+ve Otsu eşikleri (orta), Otsu maskeleri (alt). Gamma, log ve histogram eşitlemede Otsu eşiği 0'a düşmüştür.
+
+### 4.2 Segmentasyon yöntemleri
+
+Ortak ön işlem (Gaussian 15×15) sonrasında global Otsu dışındaki bütün yöntemler kaçırılan hücre
+sayısını belirgin biçimde azaltmıştır. En iyi sonucu blok bazlı Otsu vermiştir (8×8 blok, taban eşik 4;
+MAE 1,2; kaçırılan 7,9 → 0,8). Her blokta ayrı eşik hesaplandığından soluk hücre içeren bloklarda eşik
+düşmektedir. Hücre içermeyen bloklarda Otsu gürültüyü ikiye böldüğü için taban eşik zorunludur ve
+sonuç bu değere duyarlıdır (taban 4: 1,2; taban 5: 3,2). Adaptif eşik ikinci en düşük MAE'yi vermiş,
+ancak hücreleri halka biçiminde parçalamıştır (6,5 kaçırılan, 5,6 bölünme; Şekil 3a). Bu düşük MAE
+hataların birbirini götürmesinden kaynaklanmaktadır. Sabit eşik (T=7, MAE 1,7) ve Li (1,8) iyi
+sonuç vermiş; Triangle ise neredeyse bütün hücreleri bulup gürültüyü de nesne saymıştır.
+
+<img src="figures/sekil3a_segmentasyon.png" style="width:100%">
+
+**Şekil 3a.** t014'te Gaussian 15×15 sonrası yedi segmentasyon yöntemi (renkli: bulunan nesneler,
+kırmızı: referans hücreler). Global Otsu soluk hücreleri kaçırır, adaptif eşik hücreleri halka
+biçiminde parçalar, blok Otsu soluk hücrelerin çoğunu bulur.
+
+### 4.3 Morfolojik işlemler
+
+Morfolojik işlemler en iyi maskeye (Gaussian 15×15 → Blok Otsu 8×8) iki boyutta (5×5 ve 11×11 elips)
+uygulanmıştır. Büyük yapılandırma elemanı etkileri belirginleştirmiştir: closing bölünmeyi
+sıfırlamış (0,7 → 0), dilation fazla nesneyi artırmış (1,4 → 3,3), opening ve erosion soluk hücreleri
+silmiştir. Erosion 11×11'in düşük MAE'si (0,8) yine hataların birbirini götürmesinden
+kaynaklanmaktadır (1,9 kaçırılan, 1,1 bölünme). İşlem sırası değişmeli değildir: opening → closing
+MAE 1,2, closing → opening 1,7 vermiştir. Delik doldurma tek başına sayımı hiç değiştirmemiştir,
+çünkü bir nesnenin içindeki delik bağlı bileşen sayısını etkilemez. Ancak watershed'den önce
+gereklidir: delikli ve girintili ham maskede distance transform her hücrede birden fazla tepe
+üretmekte ve watershed hücreleri bölmektedir (md=10'da MAE 13,1). Maske önce closing ve delik
+doldurma ile düzeltildiğinde her hücrede tek tepe kalmış; `min_distance` = 25 ile bölünme ve
+birleşme sıfıra inmiştir (E35, MAE 0,7; Şekil 3b–3c). Son olarak min. alan 100'e çıkarılmıştır
+(E36, MAE 0,5); bu değer gürültü lekeleri (< 100 px) ile yeni bölünmüş yavru hücreler (250–400 px)
+arasındadır.
+
+<img src="figures/sekil3b_morfoloji.png" style="width:100%">
+
+**Şekil 3b.** t041'de birbirine değen iki hücre bölgesinde 14 morfolojik işlemin çıktısı ve
+geliştirme MAE değerleri.
+
+<img src="figures/sekil3c_watershed.png" style="width:66%">
+
+**Şekil 3c.** Watershed adımları: (1) Blok Otsu maskesi, (2) closing 11×11 + delik doldurma, (3)
+distance transform ve tepeler, (4) watershed sonucu. Düzeltilmiş maskede iki hücre "kum saati"
+biçimindedir ve boyun noktasından ayrılır.
+
+### 4.4 Tam pipeline deneyleri
+
+Aşamalar birleştirildikten sonra referans pipeline'dan (E36) tek değişiklik yapılarak yedi deney
+daha yapılmıştır. CLAHE ve contrast stretching tam pipeline'a eklendiğinde MAE 45–51'e çıkmıştır.
+Blok Otsu'nun taban eşiği orijinal parlaklık ölçeğinde seçilmiş mutlak bir değerdir; bu dönüşümler
+arka plan gürültüsünü bu eşiğin üzerine taşımaktadır. **Pipeline parametreleri birbirinden bağımsız
+değildir.** Gaussian 9×9 (MAE 1,2) 15×15'ten kötü, median 9×9 (0,6) ona yakın çıkmıştır. Blok
+sınırlarındaki eşik sıçramalarını gidermek için denenen interpolasyonlu blok Otsu (E43) ise soluk
+hücrelerin eşiğini komşu parlak blokların eşiğiyle karıştırdığı için sonucu kötüleştirmiştir
+(MAE 1,1).
+
+## 5. Doğrulama ve Nihai Yöntemin Belirlenmesi
+Dört aday, geliştirme kümesinde seçilen parametreleri değiştirilmeden, hiçbir parametre seçiminde
+kullanılmamış 5 doğrulama karesinde çalıştırılmıştır. Seçim kuralı, sonuçlar görülmeden önce dokümana
+uygun olarak belirlenmiştir: en düşük doğrulama MAE'si; eşitlikte RMSE, işlem süresi ve karmaşıklık.
+
+**Tablo 3.** Aday pipeline'ların doğrulama performansları (MAE, RMSE, süre); kaçırılan ve fazla: kare başına.
+
+| Pipeline | Validation MAE | Validation RMSE | Ort. süre (ms) | Bias | Kaçırılan | Fazla | Geliştirme MAE | Seçim |
+|---|---|---|---|---|---|---|---|---|
+| A (G15 + Blok Otsu) | 1,6 | 1,79 | 217 | +0,8 | 1,6 | 2,2 | 0,5 | |
+| B (Median 9 + Blok Otsu) | 1,2 | 1,41 | 271 | +0,8 | 1,4 | 1,6 | 0,6 | |
+| C (G15 + Li) | 2,8 | 3,22 | 219 | −2,8 | 3,6 | 0,8 | 3,1 | |
+| **D (G15 + sabit T=7)** | **0,8** | **1,10** | 212 | 0,0 | 2,0 | 1,6 | 1,7 | **Seçildi** |
+| Baseline (Otsu) | 3,8 | 5,39 | 10 | −2,6 | 8,6 | 0,2 | 3,4 | – |
+
+**Seçim gerekçesi.** Kural gereği en düşük doğrulama MAE'sine sahip **Pipeline D** seçilmiştir. D,
+RMSE ve süre açısından da adayların en iyisidir; eşitlik kuralına gerek kalmamıştır. Bütün adaylar
+baseline'ı geçmiştir. Geliştirmede en iyi olan A (0,5) doğrulamada üçüncü sıraya düşmüştür (1,6). A'nın
+birçok parametresi geliştirme kümesinde ayarlanmıştır ve bu karelerin çoğu sekansın 41–46 aralığında
+kümelenmiştir; blok Otsu'nun taban eşiğine duyarlılığı da yüksektir. Bu fark, geliştirme kümesine
+aşırı uyumun (overfitting) göstergesidir ve bağımsız doğrulamanın neden gerekli olduğunu gösterir.
+Sınırlılıklar da vardır. 5 karede D ile B arasındaki fark yalnızca 2 hücredir. D'nin sıfır Bias'ı ise
+kısmen 2,0 kaçırılan ve 1,6 fazla nesnenin birbirini götürmesinden kaynaklanmaktadır. Seçim kuralının
+sonuçlar görüldükten sonra değiştirilmesi seçim yanlılığı yaratacağından kurala bağlı kalınmıştır.
+Doğrulama ayrıntıları Ek C.1'dedir.
+
+**Seçilen bütün parametreler (`final_pipeline.json`).** Yoğunluk dönüşümü yok → Gaussian 15×15
+(σ ≈ 2,6) → sabit eşik T = 7 → closing 11×11 elips → delik doldurma (`binary_fill_holes`) → distance
+transform + watershed (`min_distance` = 25) → 8-komşuluk bağlı bileşen, min. alan 100 piksel.
+Baseline: global Otsu + 8-komşuluk bağlı bileşen, min. alan 50 piksel. Bu parametreler
+`final_pipeline.json` dosyasına yazılmıştır. Nihai pipeline ve baseline 15 test karesinde referanslar
+okunmadan çalıştırılmış, tahminler `test_predictions_locked.csv` dosyasına kaydedilmiştir. İki dosya,
+test referansları açılmadan önce **ayrı bir commit** ile GitHub'a yüklenmiştir. Notebook yeniden
+çalıştırıldığında kilitli dosyaların üzerine yazılmaz; tahminlerin kilitli değerlerle aynı olduğu
+doğrulanır.
+
+<img src="figures/sekil4_asamalar.png" style="width:68%">
+
+**Şekil 4.** Örnek bir görüntü (geliştirme karesi t041) üzerinde nihai pipeline'ın aşama aşama
+çıktıları. Gaussian filtre dokuyu yumuşatır; T = 7 parlak hücreleri tam ayırır, ancak merkezdeki soluk
+bir hücre noktalara dağılır. Closing ve doldurmadan sonra distance transform her hücrede tek tepe
+üretir. Sonuç 22 hücredir (referans 24). Eksik sayımın nedeni, eşiğin altında kalan sağ alttaki iki
+çok soluk hücredir (kırmızı konturlar).
+
+## 6. Bağımsız Test Sonuçları
+Test referansları, kilit commit'i (`e075cc3`, 23.11.2026 13:05) GitHub'a gönderildikten sonra ilk
+kez okunmuştur. Değerlendirmede tahminler yeniden hesaplanmamış, doğrudan
+`test_predictions_locked.csv` dosyasından alınmıştır. Notebook kilit açılmadan önce dosyaların
+commit'lenmiş, değiştirilmemiş ve gönderilmiş olduğunu otomatik olarak kontrol etmektedir.
+
+**Tablo 4.** On beş test karesine ait gerçek ve tahmin edilen hücre sayıları.
+
+| Kare | Blok | Gerçek sayı | Baseline tahmini | Nihai tahmin | Baseline mutlak hata | Nihai mutlak hata |
+|---|---|---|---|---|---|---|
+| t042 | 1 | 27 | 36 | 23 | 9 | 4 |
+| t043 | 1 | 27 | 34 | 25 | 7 | 2 |
+| t044 | 1 | 26 | 37 | 23 | 11 | 3 |
+| t045 | 1 | 26 | 38 | 22 | 12 | 4 |
+| t046 | 1 | 28 | 43 | 24 | 15 | 4 |
+| t062 | 2 | 31 | 24 | 23 | 7 | 8 |
+| t063 | 2 | 30 | 24 | 23 | 6 | 7 |
+| t064 | 2 | 30 | 19 | 23 | 11 | 7 |
+| t065 | 2 | 30 | 25 | 24 | 5 | 6 |
+| t066 | 2 | 30 | 25 | 24 | 5 | 6 |
+| t086 | 3 | 29 | 18 | 25 | 11 | 4 |
+| t087 | 3 | 30 | 24 | 27 | 6 | 3 |
+| t088 | 3 | 30 | 23 | 24 | 7 | 6 |
+| t089 | 3 | 29 | 22 | 24 | 7 | 5 |
+| t090 | 3 | 28 | 20 | 24 | 8 | 4 |
+
+**Tablo 5.** Baseline ve nihai pipeline'ın test performans metrikleri (MAE, RMSE, Bias, Exact-count Accuracy, ortalama süre).
+
+| Yöntem | MAE | RMSE | Bias | Exact-count Accuracy | Ortalama süre (ms) |
+|---|---|---|---|---|---|
+| Baseline | 8,47 | 8,93 | −1,27 | 0,00 | 11 |
+| Nihai pipeline (D) | **4,87** | **5,14** | −4,87 | 0,00 | 223 |
+
+Nihai pipeline, testte baseline'ın hatasını **%43 azaltmıştır** (MAE 8,47 → 4,87; RMSE 8,93 → 5,14) ve
+15 karenin 11'inde daha küçük hata vermiştir. Baseline'ın düşük Bias'ı (−1,27) yanıltıcıdır: blok 1'de
+7–15 hücre fazla, blok 2–3'te 5–11 hücre eksik saymakta, hatalar birbirini götürmektedir. Nihai
+pipeline ise her karede eksik saymaktadır (Bias = −MAE). İki yöntem de hiçbir karede tam doğru sayım
+yapamamıştır. Nihai yöntem baseline'dan 20 kat yavaştır (223 ms), ancak pratik kullanım için yeterlidir.
+
+### 6.1 Test ve doğrulama sonuçlarının karşılaştırılması
+Pipeline D'nin MAE'si geliştirmede 1,70, doğrulamada 0,80, testte 4,87'dir. Test hatası doğrulamanın
+yaklaşık 6 katıdır. Tanı ölçütleri hatanın türünü açıkça göstermektedir: kare başına 5,7 hücre
+kaçırılmakta, buna karşılık bölünme (0,27), birleşme (0) ve fazla nesne (0,6) neredeyse hiç yoktur. Şekil
+ve ayırma aşamaları testte de doğru çalışmaktadır; sorun yalnızca eşik aşamasındadır. Her referans
+hücrenin Gaussian sonrası ortalama parlaklığı ölçüldüğünde nedeni nicel olarak ortaya çıkmıştır (Ek C.2).
+Seq 02, Seq 01'den 2–3 kat daha karanlıktır: hücre parlaklık medyanı 29,3'e karşı 10,0, görüntü p99
+değeri 68,5'e karşı 29,8'dir. Kaçırılan bütün hücrelerin parlaklığı 6,5'in altındadır. Testte T = 7'nin
+altındaki hücre oranı (%20), kaçırılan hücre oranıyla (%20) birebir örtüşmektedir. Bölüm 5'te sınırlılık
+olarak belirtilen risk gerçekleşmiştir: mutlak bir parlaklık değerine dayanan sabit eşik, parlaklığı
+farklı bir sekansa genellenememiştir. Derste vurgulandığı gibi, sabit eşik ancak görüntülerin
+histogramları birbirine benzetildiğinde farklı görüntülere uygulanabilir. Doğrulama kümesi de Seq
+01'den alındığı için bu farkı yakalayamamıştır. Kurallar gereği test sonuçlarından sonra yöntem
+değiştirilmemiş, diğer adaylar test kümesinde çalıştırılmamıştır.
+
+### 6.2 Zamansal analiz
+Her test bloğu 5 ardışık kareden oluşan ayrı bir zaman segmenti olarak incelenmiştir (Şekil 5).
+Referanstaki her sayım değişiminin nedeni TRA etiketleri ve `man_track.txt` soy ağacından
+belirlenmiştir (geçiş tablosu Ek C.3). Gerçek sayı bloklar içinde yavaş değişir (ortalama |Δ| 0,25–0,75,
+en fazla 2). Test bloklarında bölünme yoktur. Değişimlerin tamamı hücrelerin görüntüden kaybolması (5),
+bir süre görünmedikten sonra yeniden belirmesi (2) ve görüş alanına girmesi (1) ile açıklanmaktadır;
+hücreler üç boyutlu hareket ederek odaktan çıkıp girmektedir. **Baseline** ardışık karelerde 5–6 hücrelik,
+biyolojik olarak mümkün olmayan sıçramalar yapmaktadır. **Nihai pipeline** çok daha kararlıdır
+(ortalama |Δ| 0,25–1,75). Ancak blok 2'de gerçek sayının 7 altında, ona paralel bir çizgi izlemektedir.
+Hücre kimliği bazındaki analiz bu sabit farkın nedenini göstermektedir: bir karede kaçırılıp sonraki
+karede de görünen 67 hücreden 66'sı (%99) yine kaçırılmıştır. Hata sistematiktir; aynı soluk hücreler
+her karede kaçırılır. Yeniden belirdikleri anda soluk olan hücreler ilk karelerinden itibaren
+kaçırılmaktadır. 20 numaralı hücre ise odaktan çıkarken önce kaçırılmış, ardından referanstan da
+kaybolmuştur (Şekil C.3). Nihai tahmindeki +2/−3'lük ani değişimler gerçek değişimlerden değil, sahte
+bölünme ve küçük parçalardan kaynaklanmaktadır.
+
+<img src="figures/sekil5_zamansal.png" style="width:100%">
+
+**Şekil 5.** Üç test bloğu için gerçek ve tahmin edilen hücre sayılarının zamansal değişimi (üstteki notlar: soy ağacına göre gerçek değişimin nedeni).
+
+**Zamansal karar stratejisi.** Parametreleri yalnızca Seq 01'in soy ağacından belirlenen iki kurallı bir
+strateji önerilmiştir. (1) *Tutarlılık kontrolü:* Seq 01'in 92 karesinde gerçek sayı ardışık iki kare
+arasında en fazla 2 değişmiştir. Bu yüzden |Δ tahmin| > 2 olan geçişler "şüpheli" olarak işaretlenir.
+(2) *Zamansal medyan:* Her karenin sayımı, kendisi ve iki komşusunun medyanıyla düzeltilir. Kilitli
+tahminler değiştirilmeden ayrı bir analiz olarak uygulandığında kontrol, baseline'da 5, nihai
+pipeline'da 1 şüpheli geçiş yakalamıştır. Medyan, kareden kareye titremeyi belirgin biçimde azaltmış
+(ortalama |Δ| nihai 1,08 → 0,33, baseline 2,67 → 0,88, gerçek 0,58), ancak **MAE'yi düzeltmemiştir**
+(nihai 4,87 → 5,00). Zamansal yöntemler rastgele hataları giderebilir, fakat her karede aynı hücrelerin
+kaçırılmasından doğan sistematik hatayı gideremez. Strateji bu nedenle bir kalite kontrol adımı olarak
+önerilmektedir: segmentasyon hatalarını tespit eder ve sayım dizisini kararlı hale getirir.
+
+### 6.3 Başarılı, hatalı ve zorlayıcı örnekler
+Örnek bölgeler nesnel bir ölçütle seçilmiştir: 260×260 piksellik pencerelerde doğru bulunan, kaçırılan
+ve bölünen hücreler sayılmıştır (Şekil 6). **Başarılı (t062):** Yeterince parlak 7 hücrenin tamamı tek ve
+doğru nesne olarak bulunmuştur. **Hatalı (t062):** 4 hücrenin hiçbiri bulunamamıştır. Bu hücreler
+parlatılmış görüntüde düzgün ve yuvarlak olarak açıkça seçilir; tek sorunları mutlak parlaklıklarının
+T = 7'nin altında kalmasıdır. Test hatasının neredeyse tamamı bu türdendir. **Zorlayıcı (t043):** Eşiğe
+çok yakın parlaklıktaki bir hücre düzensiz parçalar hâlinde yakalanmış, watershed onu ikiye bölmüştür.
+Eşiğe yakın hücreler hem kaçırılma hem de bölünme hatalarının ortak kaynağıdır.
+
+<img src="figures/sekil6_ornekler.png" style="width:72%">
+
+**Şekil 6.** Başarılı, hatalı ve zorlayıcı sayım örneklerinin karşılaştırılması (üst: gösterim için parlatılmış görüntü; alt: yeşil nesne sınırı, kırmızı referans hücre).
+
+## 7. Tartışma ve Sonuç
+
+### 7.1 Deneysel sonuçların tartışılması
+**1. Yoğunluk dönüşümleri.** Baseline ile en başarılı dönüşüm contrast stretching olmuştur (3,4 → 2,4).
+Görsel olarak en çarpıcı olan gamma, log ve histogram eşitleme ise Otsu eşiğini 0'a çekerek sayımı en
+çok bozmuştur (Şekil 2). Tam pipeline'da hiçbir dönüşüm yarar sağlamamış; CLAHE, mutlak taban eşikli blok
+Otsu ile birleşince MAE'yi 45,7'ye çıkarmıştır. Bir dönüşümün etkisi sonraki aşamalarla etkileşimine
+bağlıdır.
+
+**2. Filtre ve kernel boyutu.** Büyük kernel gürültü bileşenlerini (779 → 24) ve parçalanmayı (5,0 → 2,3)
+azaltmıştır. Global Otsu ile MAE yine de artmıştır, çünkü filtre parçalanmanın gizlediği eksik sayımı
+açığa çıkarmıştır. Yerel ya da sabit eşikle ise büyük kernel açıkça yararlıdır (G9 ile 1,2, G15 ile 0,5).
+Keskinleştirme gürültüyü güçlendirdiği için uygun değildir.
+
+**3. Segmentasyon.** Geliştirmede blok Otsu (kaçırılan 7,9 → 0,8), doğrulamada sabit eşik en başarılı
+olmuştur. Adaptif eşik hücreleri halka biçiminde parçalamış; Otsu ve Triangle tek tepeli histograma
+uymamıştır. "En başarılı" yöntem, değerlendirildiği veri kümesine bağlı çıkmıştır.
+
+**4. Morfoloji sırası ve eleman boyutu.** 11×11 eleman etkileri belirginleştirmiştir: closing bölünmeyi
+sıfırlamış, dilation fazla nesneyi artırmış, erosion ve opening soluk hücreleri silmiştir. İşlem sırası
+değişmeli değildir (opening → closing 1,2; closing → opening 1,7). Delik doldurma tek başına etkisizdir,
+ama watershed'den önce zorunludur (ham maske 1,4 → düzeltilmiş 0,7; Şekil 3c).
+
+**5. Ölçülebilir iyileşme.** En büyük iyileşme global eşikten yerel ya da sabit eşiğe geçişte
+gerçekleşmiştir (5,5 → 1,2 / 1,7). Ardından closing (0,9), closing + doldurma + watershed (0,7) ve min.
+alan 100 (0,5) gelir (Ek B.7). Gaussian 15×15 tek başına MAE'yi artırmış, ancak sonraki iyileşmelerin ön
+koşulu olmuştur. Erosion 11×11 ve adaptif eşiğin düşük MAE'leri ise hataların birbirini götürmesinden
+kaynaklanan görünür iyileşmelerdir. Seçimlerde bu nedenle tanı ölçütleri de kullanılmıştır.
+
+**6. Doğrulamada başarılı yöntem testte başarılı mı?** Kısmen. D doğrulamada en iyisidir (0,8), testte ise
+hata yaklaşık 6 kat artmıştır (4,87). Şekil ve ayırma aşamaları testte de çalışmış, ancak eşik daha karanlık
+Seq 02'ye genellenememiştir. Aynı sekanstan alınan doğrulama, sekans içi aşırı uyumu (A) yakalayabilmiş,
+sekanslar arası genellemeyi ölçememiştir.
+
+**7. Nihai pipeline baseline'dan iyi mi?** Evet; üç veri grubunun üçünde de (MAE 3,4 → 1,7; 3,8 → 0,8;
+8,47 → 4,87). Nihai yöntem zamansal olarak da çok daha tutarlıdır (ortalama |Δ| 1,08'e karşı 2,67).
+Bedeli işlem süresidir (223 ms'ye karşı 11 ms).
+
+**8. Hatalı sayımların nedenleri.** (i) Eşiğin altında kalan soluk ve odak dışı hücreler: test hatasının
+neredeyse tamamı bundandır ve ardışık karelerde %99 oranında tekrarlanır. (ii) Eşiğe yakın hücrelerin
+parçalanıp bölünmesi. (iii) Referansta etiketsiz kenar nesneleri (fazla sayım). (iv) Baseline'da global
+eşiğin kareden kareye değişmesi.
+
+**9. Başka mikroskobik görüntülerde sınırlamalar.** En önemli sınırlama mutlak eşiktir (T = 7). Farklı
+mikroskop, pozlama ya da boya yoğunluğu bu eşiği geçersiz kılar; Seq 02 bunun somut örneğidir.
+Kernel, closing elemanı, `min_distance` ve min. alan ≈ 60 piksellik hücre çapına göre seçilmiştir; farklı
+büyütmede yeniden ayarlanmaları gerekir. Yöntem iki boyutludur ve odak dışı hücreleri yapısı gereği
+kaçırır. Çok yoğun kümelerde watershed yetersiz kalabilir.
+
+### 7.2 Sonuç
+Bu çalışmada, Fluo-N2DH-GOWT1 veri setinde klasik görüntü işleme yöntemleriyle hücre sayımı için
+43 kontrollü deney yapılmış, 4 aday pipeline oluşturulmuş ve doğrulama kümesinde en düşük MAE'yi
+veren Gaussian 15×15 → sabit eşik → closing → delik doldurma → watershed → min. alan pipeline'ı
+seçilmiştir. Nihai yöntem, bağımsız testte baseline'ın hatasını %43 azaltmış ve zamansal olarak
+çok daha tutarlı sayımlar üretmiştir. Ancak farklı parlaklıktaki ikinci sekansa tam olarak
+genellenememiş ve her karede ortalama 4,9 hücre eksik saymıştır.
+
+Başlıca bulgular şöyle özetlenebilir: (1) Bu veri setinde sayım hatasının asıl kaynağı gürültü
+değil, eşikleme aşamasıdır. (2) Morfolojik işlemlerin etkisi sıralarına bağlıdır ve watershed'den
+önce maskenin düzeltilmesi gereklidir. (3) Sayıma dayalı MAE, hataların birbirini götürmesi
+nedeniyle tek başına yanıltıcı olabilir; tanı ölçütleri ve görsel inceleme gereklidir. (4)
+Geliştirme kümesinde en iyi olan yöntem doğrulamada geriye düşebilir; bağımsız doğrulama ve test
+kümeleri bu nedenle vazgeçilmezdir. (5) Zamansal yöntemler rastgele hataları bastırabilir, ancak
+sistematik eksik sayımı düzeltemez.
+
+**Geliştirilebilecek yönler.** (i) Sabit eşik, görüntüler arası parlaklık farkını gideren bir
+normalizasyonla birleştirilmelidir. Örneğin histogram eşleme (E07) ya da görüntü başına arka plan
+ve hücre parlaklığına göre ölçeklenen bir eşik kullanılabilir. Bu, derste sabit eşik için önerilen
+koşuldur ve bu çalışmadaki genelleme sorununu doğrudan hedefler. (ii) Doğrulama kümesi birden
+fazla sekanstan oluşturulursa sekanslar arası genelleme seçim aşamasında ölçülebilir. (iii) Blok
+bazlı Otsu'da daha küçük bloklar ya da hücre başına yerel eşik, parlak ve soluk hücrelerin aynı
+blokta bulunması sorununu azaltabilir. (iv) Zamansal bilgi, yalnızca sayımın düzeltilmesinde değil,
+bir karede bulunan hücrenin komşu karelerde aranmasında da kullanılabilir. Bu yaklaşım, odaktan
+geçici olarak çıkan hücrelerin kaçırılmasını azaltabilir.
+
+## 8. Kaynakça
+1. Cell Tracking Challenge, Fluo-N2DH-GOWT1 veri seti. https://celltrackingchallenge.net/2d-datasets/
+2. V. Ulman et al., "An objective comparison of cell-tracking algorithms," *Nature Methods*, 14, 1141–1152, 2017.
+3. M. Maška et al., "A benchmark for comparison of cell tracking algorithms," *Bioinformatics*, 30(11), 1609–1617, 2014.
+4. E. Bártová et al., "Recruitment of Oct4 protein to UV-damaged chromatin in embryonic stem cells," *PLoS ONE*, 6(12), e27954, 2011.
+5. N. Otsu, "A Threshold Selection Method from Gray-Level Histograms," *IEEE Trans. Systems, Man, and Cybernetics*, 9(1), 62–66, 1979.
+6. C. H. Li and C. K. Lee, "Minimum cross entropy thresholding," *Pattern Recognition*, 26(4), 617–625, 1993.
+7. G. W. Zack, W. E. Rogers and S. A. Latt, "Automatic measurement of sister chromatid exchange frequency," *J. Histochemistry & Cytochemistry*, 25(7), 741–753, 1977.
+8. K. Zuiderveld, "Contrast Limited Adaptive Histogram Equalization," in *Graphics Gems IV*, Academic Press, 474–485, 1994.
+9. L. Vincent and P. Soille, "Watersheds in digital spaces: an efficient algorithm based on immersion simulations," *IEEE Trans. Pattern Analysis and Machine Intelligence*, 13(6), 583–598, 1991.
+10. P. Soille, *Morphological Image Analysis: Principles and Applications*, 2nd ed., Springer, 2003.
+11. R. C. Gonzalez and R. E. Woods, *Digital Image Processing*, 4th ed., Pearson, 2018.
+12. G. Bradski, "The OpenCV Library," *Dr. Dobb's Journal of Software Tools*, 2000.
+13. S. van der Walt et al., "scikit-image: image processing in Python," *PeerJ*, 2, e453, 2014.
+14. P. Virtanen et al., "SciPy 1.0: fundamental algorithms for scientific computing in Python," *Nature Methods*, 17, 261–272, 2020.
+15. C. R. Harris et al., "Array programming with NumPy," *Nature*, 585, 357–362, 2020.
+
+<div class="sayfa-sonu"></div>
+
+## Ekler
+
+### Ek A. 15 test karesinin tamamının görsel sonuçları
+
+<img src="figures/ekA_test15.png" style="width:100%">
+
+**Şekil A.1.** Nihai pipeline'ın 15 test karesindeki çıktısı (yeşil: bulunan nesne sınırı, kırmızı: referans hücre). Başlıklarda nihai tahmin, referans, baseline tahmini ve tanı ölçütleri yer alır.
+
+### Ek B. Ayrıntılı deney analizleri (geliştirme kümesi)
+
+#### B.1 Yoğunluk dönüşümleri
 Yedi yoğunluk konfigürasyonu, geri kalan adımlar baseline ile aynı tutularak (Otsu, 8-komşuluk,
 min. alan 50) geliştirme kümesinde karşılaştırılmıştır (E01–E07). Her dönüşüm orijinal görüntüye
 ayrı ayrı uygulanmıştır.
@@ -227,10 +500,7 @@ da artırdığı için Otsu eşiğini yükseltmiş ve eksik sayımı artırmış
 soluk hücrelerin parçalı segmentasyonu devam etmektedir; bu sorun filtreleme adımında ele
 alınmıştır.
 
-**Şekil 2.** Orijinal görüntü ve farklı yoğunluk dönüşümlerinin sonuçları; ilgili histogramlar.
-
-### 4.2 Filtre ve kernel karşılaştırmaları
-
+#### B.2 Filtre ve kernel karşılaştırmaları
 Filtreler, yoğunluk dönüşümü uygulanmadan ve baseline segmentasyonu (Otsu, min. alan 50) sabit
 tutularak karşılaştırılmıştır (E08–E16). Sayım hatalarının birbirini götürmesini ayırt etmek
 için bulunan nesneler TRA etiketleriyle eşleştirilmiş; kaçırılan, bölünen ve fazla nesneler ayrı
@@ -259,8 +529,8 @@ hiç yer almamaktadır; darboğaz gürültü değil, tek global eşiğin (≈30)
 üstünde kalmasıdır. Keskinleştirme filtreleri gürültüyü de güçlendirdiği için parçalanmayı ve
 kaçırılan hücre sayısını artırmıştır; E16'nın düşük MAE'si yine hataların birbirini götürmesinden
 kaynaklanmaktadır. Median 9×9 yaklaşık 7 kat daha yavaştır (≈76 ms).
-### 4.3 Segmentasyon yöntemleri
 
+#### B.3 Segmentasyon yöntemleri
 Segmentasyon yöntemleri ortak bir ön işlemden (Gaussian 15×15) sonra, min. alan 50 sabit
 tutularak karşılaştırılmıştır. Parametreli yöntemlerin parametreleri yalnızca geliştirme kümesinde
 taranarak seçilmiştir.
@@ -276,7 +546,7 @@ taranarak seçilmiştir.
 | E22 | Blok Otsu 4×4 | taban 5 | 1,9 | −1,7 | 3,9 | 2,2 | 0,0 | 0,0 |
 
 Global Otsu dışındaki tüm yöntemler kaçırılan hücre sayısını belirgin biçimde azaltmıştır; bu,
-Bölüm 4.2'deki "darboğaz eşiktir" yorumunu doğrular. En iyi sonuç blok bazlı Otsu (8×8) ile elde
+Ek B.2'deki "darboğaz eşiktir" yorumunu doğrular. En iyi sonuç blok bazlı Otsu (8×8) ile elde
 edilmiştir: kaçırılan hücre 7,9'dan 0,8'e inmiştir. Her blokta ayrı eşik hesaplandığı için soluk
 hücre içeren bloklarda eşik düşmekte, parlak hücre içeren bloklarda yükselmektedir. Hücre
 içermeyen bloklarda Otsu gürültüyü ikiye böldüğünden taban eşik zorunludur (taban 0'da MAE > 100);
@@ -293,9 +563,8 @@ sonuç vermekle birlikte, parlaklığı farklı sekanslara veya mikroskoplara ge
 yöntemdir; Li yöntemi ise her görüntü için eşiği otomatik hesapladığından genelleme açısından
 avantajlıdır.
 
-### 4.4 Morfolojik işlemler
-
-Morfolojik işlemler, Bölüm 4.3'ün en iyi maskesine (Gaussian 15×15 → Blok Otsu 8×8, E21)
+#### B.4 Morfolojik işlemler
+Morfolojik işlemler, Ek B.3'ün en iyi maskesine (Gaussian 15×15 → Blok Otsu 8×8, E21)
 uygulanmıştır; önceki adımlar sabit tutulmuştur. Hücreler yuvarlak olduğundan elips biçimli
 yapılandırma elemanı, iki boyutta (5×5 ve 11×11) kullanılmıştır. Watershed için `min_distance`
 parametresi geliştirme kümesinde taranmıştır (ham maske: 10–50 aralığında MAE 13,1'den 1,4'e;
@@ -327,7 +596,7 @@ bölünmeyi tamamen ortadan kaldırmış (0,7 → 0,0), ancak birbirine değen h
 
 Erosion 11×11, tek başına uygulanan işlemler arasında en düşük MAE'yi (0,8) vermiştir; ancak tanı
 ölçütleri bunun yine hataların birbirini götürmesinden kaynaklandığını göstermektedir: soluk
-hücreler silinmiş (kaçırılan 1,9), bazı hücreler parçalara ayrılmıştır (bölünme 1,1). Şekil 3a'da
+hücreler silinmiş (kaçırılan 1,9), bazı hücreler parçalara ayrılmıştır (bölünme 1,1). Şekil 3c'de
 t041 karesindeki iki hücrenin erosion sonrası birden fazla parçaya ayrıldığı görülmektedir. Bu
 nedenle erosion nihai seçim için uygun değildir.
 
@@ -344,57 +613,18 @@ küçük `min_distance` değerlerinde aşırı bölünme görülmüş (md=10'da 
 önleyecek kadar büyük `min_distance` (35) seçildiğinde ise bölünme (1,2) devam etmiş, birbirine
 değen hücreler de tam ayrılamamıştır. Maske önce closing ve delik doldurma ile düzeltildiğinde
 (E35) her hücrede tek bir tepe kalmış, hücre yarıçapının yaklaşık yarısı olan `min_distance` = 25
-ile hem bölünme hem birleşme sıfıra inmiştir. Şekil 3b bu adımları t041 karesinde göstermektedir:
+ile hem bölünme hem birleşme sıfıra inmiştir. Şekil 3c bu adımları t041 karesinde göstermektedir:
 Blok Otsu maskesinde delikli ve birbirine değen iki hücre, closing ve doldurmadan sonra tek bir
 "kum saati" biçimine dönüşmekte, distance transform iki ayrı tepe üretmekte, watershed iki hücreyi
 boyun noktasından ayırmaktadır.
 
 E35, MAE 0,7 ile en iyi sonucu vermiştir. Kalan hatanın büyük kısmı "fazla" nesnelerden (1,4)
-oluşmaktadır; bunlar Bölüm 2.4'te belirtilen, görüntü kenarında olup referansta işaretlenmemiş
+oluşmaktadır; bunlar Bölüm 2.3'te belirtilen, görüntü kenarında olup referansta işaretlenmemiş
 hücreler ve gürültü lekeleridir. Bu hata morfolojik işlemlerle giderilemez. Watershed, işlem süresini
 kare başına yaklaşık 13 ms'den 222 ms'ye çıkarmıştır; bu süre hâlâ pratik kullanım için kabul
 edilebilir düzeydedir.
 
-**Şekil 3a.** t041 karesinde birbirine değen iki hücre bölgesinde 14 morfolojik işlemin çıktısı
-(renkli: bulunan nesneler, kırmızı çizgi: referans hücre sınırları).
-
-**Şekil 3b.** Watershed adımları: (1) Blok Otsu maskesi, (2) closing 11×11 + delik doldurma,
-(3) distance transform ve tepeler, (4) watershed sonucu.
-
-### 4.5 Kontrollü deney tablosu
-
-Toplam 43 deney yapılmıştır; tamamı, her deneyin 10 geliştirme karesindeki tahminleriyle birlikte
-`experiments.csv` dosyasındadır. Tablo 2'de her aşamanın temsilî deneyleri ile tam pipeline
-deneyleri verilmiştir. Bütün değerler geliştirme kümesinde hesaplanmıştır.
-
-**Tablo 2.** En az 10 deneysel konfigürasyonun yöntem, parametre ve performans karşılaştırması.
-
-| Deney ID | Yoğunluk | Filtre | Segment. | Morfoloji | Param. | Count MAE |
-|---|---|---|---|---|---|---|
-| E01 | Orijinal | – | Otsu | – | min. alan 50 | 3,4 |
-| E02 | Contrast stretching | – | Otsu | – | p99,5 → 255 | 2,4 |
-| E04 | Logaritmik | – | Otsu | – | – | 460,1 |
-| E11 | Orijinal | Gaussian 15×15 | Otsu | – | – | 5,5 |
-| E16 | Orijinal | Unsharp masking | Otsu | – | σ=2, miktar 1 | 2,9 |
-| E17 | Orijinal | Gaussian 15×15 | Sabit eşik | – | T=7 | 1,7 |
-| E19 | Orijinal | Gaussian 15×15 | Li | – | otomatik | 1,8 |
-| E20 | Orijinal | Gaussian 15×15 | Adaptif Gaussian | – | blok 101, C=−10 | 1,5 |
-| E21 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | – | taban 4 | 1,2 |
-| E24 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Erosion 11×11 | – | 0,8 |
-| E30 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Closing 11×11 | – | 0,9 |
-| E34 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Watershed (ham maske) | md=35 | 1,4 |
-| E35 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | md=25, min. alan 50 | 0,7 |
-| **E36 (A)** | Orijinal | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | md=25, min. alan 100 | **0,5** |
-| E37 | CLAHE | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 45,7 |
-| E38 | Contrast stretching | Gaussian 15×15 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 51,4 |
-| E39 | Orijinal | Gaussian 9×9 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 1,2 |
-| E40 (B) | Orijinal | Median 9×9 | Blok Otsu 8×8 | Closing → doldurma → watershed | E36 ile aynı | 0,6 |
-| E41 (C) | Orijinal | Gaussian 15×15 | Li | Closing → doldurma → watershed | E36 ile aynı | 3,1 |
-| E42 (D) | Orijinal | Gaussian 15×15 | Sabit eşik T=7 | Closing → doldurma → watershed | E36 ile aynı | 1,7 |
-| E43 | Orijinal | Gaussian 15×15 | Blok Otsu 8×8, interpolasyonlu | Closing → doldurma → watershed | E36 ile aynı | 1,1 |
-
-### 4.6 Sonuçların yorumlanması
-
+#### B.5 Tam pipeline deneylerinin yorumu
 **Minimum alan (E36).** E35 üzerinde 50–600 piksel aralığı taranmıştır. MAE 100–200 aralığında en
 düşüktür (0,5); eşitlik durumunda en küçük değer (100) seçilmiştir. Bu aralık veri analiziyle
 uyumludur: gürültü lekeleri 100 pikselden küçük, bölünme sonrası yavru hücreler 250–400 piksel,
@@ -418,10 +648,10 @@ bir sonuç (0,6) elde edilmiştir; ancak median biraz daha fazla bölünme (0,4)
 üretmiş ve daha yavaştır (296 ms'ye karşı 226 ms).
 
 **Eşik (E41, E42).** Blok Otsu yerine global eşik kullanıldığında performans belirgin biçimde
-düşmüştür. Li yöntemi soluk hücreleri kaçırmaktadır (kaçırılan 3,4; Bias −3,1). Bölüm 4.3'te
+düşmüştür. Li yöntemi soluk hücreleri kaçırmaktadır (kaçırılan 3,4; Bias −3,1). Ek B.3'te
 (min. alan 50) Li'nin MAE'si 1,8 iken burada 3,1'dir: Li ile kısmen bulunan soluk hücreler küçük
 parçalar hâlinde kalmakta ve min. alan 100 tarafından silinmektedir. Sabit eşik (T=7) de 2,1
-hücre kaçırmıştır. Her iki sonuç, Bölüm 4.3'teki temel bulguyu doğrular: bu veri setinde asıl
+hücre kaçırmıştır. Her iki sonuç, Ek B.3'teki temel bulguyu doğrular: bu veri setinde asıl
 darboğaz eşiklemedir ve hücre parlaklıkları geniş bir aralıkta değiştiği için yerel (blok bazlı)
 eşik gereklidir.
 
@@ -449,40 +679,29 @@ Taban 5 ile MAE 0,5'e inmiş, ancak bunun arkasında
 klasik Blok Otsu korunmuş, blok sınırı yapaylığı yöntemin bir sınırlılığı olarak kaydedilmiştir
 (Bölüm 7).
 
-## 5. Doğrulama ve Nihai Yöntemin Belirlenmesi (16.5)
+#### B.6 Segmentasyon parametre taramaları
+<img src="figures/ekB7_taramalar.png" style="width:100%">
 
-Dört aday pipeline, geliştirme kümesinde seçilen parametreleri değiştirilmeden, daha önce hiçbir
-parametre seçiminde kullanılmamış 5 doğrulama karesinde (t004, t020, t032, t053, t078) çalıştırılmıştır.
-Seçim kuralı, sonuçlar görülmeden önce dokümana uygun olarak belirlenmiştir: en düşük doğrulama
-MAE'si; eşitlik durumunda RMSE, ardından işlem süresi ve karmaşıklık.
+**Şekil B.1.** Sabit eşik T, adaptif eşik (blok, C) ve blok Otsu taban eşiği taramaları (geliştirme MAE).
 
-**Tablo 3.** Aday pipeline'ların doğrulama performansları (MAE, RMSE, süre).
+#### B.7 İyileşme zinciri
+<img src="figures/ekB6_iyilesme.png" style="width:100%">
 
-| Pipeline | Validation MAE | Validation RMSE | Ortalama süre (ms) | Bias | Kaçırılan | Fazla | Geliştirme MAE | Seçim |
-|---|---|---|---|---|---|---|---|---|
-| A (Gaussian 15 + Blok Otsu) | 1,6 | 1,79 | 217 | +0,8 | 1,6 | 2,2 | 0,5 | |
-| B (Median 9 + Blok Otsu) | 1,2 | 1,41 | 271 | +0,8 | 1,4 | 1,6 | 0,6 | |
-| C (Gaussian 15 + Li) | 2,8 | 3,22 | 219 | −2,8 | 3,6 | 0,8 | 3,1 | |
-| **D (Gaussian 15 + sabit T=7)** | **0,8** | **1,10** | 212 | 0,0 | 2,0 | 1,6 | 1,7 | **Seçildi** |
-| Baseline (Otsu) | 3,8 | 5,39 | 10 | −2,6 | 8,6 | 0,2 | 3,4 | – |
+**Şekil B.2.** Baseline'dan aday pipeline'lara her değişikliğin geliştirme MAE'sine etkisi; sağda baseline ve nihai yöntemin geliştirme / doğrulama / test MAE'si.
 
+#### B.8 Pipeline A'nın geliştirme kümesindeki çıktısı ve blok eşik haritaları
+<img src="figures/ekB1_pipelineA_dev.png" style="width:100%">
+
+<img src="figures/ekB2_esik_haritasi.png" style="width:100%">
+
+**Şekil B.3.** Üst: Pipeline A'nın 10 geliştirme karesi. Alt: t014 için klasik (basamaklı) ve interpolasyonlu blok Otsu eşik haritaları ve sonuçları (sarı: blok sınırları).
+
+### Ek C. Doğrulama ve test için ek analizler
+
+#### C.1 Doğrulama kümesi ayrıntıları
 Kare bazında tahminler (referans / A / B / C / D / baseline): t004: 23 / 21 / 22 / 19 / 22 / 13;
 t020: 23 / 24 / 23 / 20 / 23 / 17; t032: 24 / 25 / 26 / 19 / 23 / 24; t053: 21 / 22 / 22 / 20 / 21 / 24;
 t078: 20 / 23 / 22 / 19 / 22 / 20.
-
-**Seçim gerekçesi.** Kural gereği en düşük doğrulama MAE'sine sahip Pipeline D (MAE 0,8; RMSE 1,10)
-nihai pipeline olarak seçilmiştir. D, RMSE ve süre açısından da adaylar arasında en iyisidir; dolayısıyla
-eşitlik kuralına başvurmaya gerek kalmamıştır. Bütün adaylar baseline'ı belirgin biçimde geçmiştir
-(MAE 3,8 → 0,8–2,8).
-
-**Geliştirme ile doğrulama arasındaki sıralama değişimi.** Geliştirme kümesinde en iyi olan A (0,5),
-doğrulamada üçüncü sıraya düşmüştür (1,6); D ise 1,7'den 0,8'e iyileşmiştir. A'nın birçok parametresi
-(blok taban eşiği, min. alan, `min_distance`) geliştirme kümesinde ayarlanmıştır ve geliştirme
-karelerinin çoğu sekansın 41–46 aralığında kümelenmiştir (Bölüm 2.3). Doğrulama kareleri ise sekansın
-farklı bölgelerinden gelmektedir. A'nın bu farkı, geliştirme kümesine aşırı uyumun (overfitting) bir
-göstergesidir ve bağımsız bir doğrulama kümesinin neden gerekli olduğunu açıkça göstermektedir.
-Blok Otsu'nun taban eşiğine yüksek duyarlılığı (Bölüm 4.3: taban 4 → 5 ile MAE 1,2 → 3,2) da bu
-kırılganlığı desteklemektedir.
 
 **Kare bazında davranış.** Tahmin çizgileri incelendiğinde D referansı en yakından izleyen adaydır;
 iki karede (t020, t053) tam doğru sayım yapmış, diğerlerinde en fazla 2 hücre sapmıştır. Pipeline C (Li)
@@ -490,7 +709,7 @@ her karede 19–20 hücre bulmuştur; referans değiştiğinde tahmin değişmem
 saymaktadır. Baseline ise 13 ile 24 arasında dalgalanarak en kararsız davranışı göstermiştir. A ve B'de
 doğrulama MAE'si geliştirme MAE'sinin 2–3 katına çıkmış, C ve D'de ise düşmüştür.
 
-**Görsel inceleme ve tanı ölçütleri.** D'nin doğrulama karelerindeki görsel çıktısı (Ek B) iki önemli
+**Görsel inceleme ve tanı ölçütleri.** D'nin doğrulama karelerindeki görsel çıktısı (Şekil C.1) iki önemli
 noktayı ortaya koymuştur. Birincisi, kaçırılan hücrelerin çoğu her karede aynı bölgededir: görüntünün sağ
 alt kısmındaki çok soluk hücre grubu. Bu hücrelerin parlaklığı T = 7 eşiğinin altındadır; hücrelerin
 sıvı içinde üç boyutlu hareket ederek odak düzleminin dışına çıkmasıyla açıklanabilir. Hata rastgele
@@ -500,136 +719,26 @@ kaçırılmış ve 3 fazla nesne (küçük parçalar ve görüntü kenarındaki 
 Sayım doğru olsa da 6 segmentasyon hatası birbirini götürmüştür. Bu, yalnızca sayıma dayalı MAE'nin
 sınırlılığını ve tanı ölçütlerinin gerekliliğini göstermektedir.
 
-**Sınırlılıklar.** Doğrulama kümesi yalnızca 5 karedir; D ile B arasındaki fark (0,8 ve 1,2) toplamda 2
-hücreye karşılık gelir ve istatistiksel olarak güçlü bir fark değildir. Ayrıca D'nin Bias değerinin 0
-olması kısmen hataların birbirini götürmesinden kaynaklanmaktadır: kare başına 2,0 kaçırılan hücre ve
-1,6 fazla nesne vardır. Toplam yapısal hata açısından B daha temizdir. Seçim kuralının sonuçlar
-görüldükten sonra değiştirilmesi seçim yanlılığına yol açacağından kurala bağlı kalınmış, bu durum
-test sonuçlarının yorumunda dikkate alınmıştır (Bölüm 6). Sabit eşik, farklı parlaklıktaki sekanslara
-veya mikroskoplara genellenme açısından en zayıf yöntemdir (Bölüm 4.3); bu risk, Seq 02 üzerindeki
-bağımsız testte ölçülecektir.
+<img src="figures/ekB3_dogrulama_grafik.png" style="width:100%">
 
-**Seçilen bütün parametreler (final_pipeline.json).**
+<img src="figures/ekB3_dogrulama_kareler.png" style="width:100%">
 
-| Aşama | Yöntem | Parametre |
-|---|---|---|
-| Yoğunluk | Orijinal (dönüşüm yok) | – |
-| Filtre | Gaussian | 15×15 çekirdek, σ OpenCV varsayılanı (≈ 2,6) |
-| Segmentasyon | Sabit eşik | T = 7 (piksel > 7 → hücre) |
-| Morfoloji | Closing | 11×11 elips |
-| Delik doldurma | `binary_fill_holes` | – |
-| Nesne ayırma | Distance transform + watershed | `min_distance` = 25 |
-| Son işlem | Bağlı bileşen + min. alan | 8-komşuluk, min. alan 100 piksel |
-| Baseline | Global Otsu + bağlı bileşen | min. alan 50 piksel |
+**Şekil C.1.** Doğrulama kareleri: referans ve aday tahminleri, geliştirme ve doğrulama MAE'si (üst); Pipeline D'nin 5 doğrulama karesindeki çıktısı (alt).
 
-**Şekil 4.** Örnek bir görüntü üzerinde nihai pipeline'ın aşama aşama çıktıları.
+#### C.2 Test kümesinde hücre parlaklığı
+Her referans hücrenin, nihai pipeline'ın eşiği uyguladığı Gaussian 15×15 sonrası görüntüdeki ortalama parlaklığı (notebook Bölüm 13 (c)):
 
-Şekil 4, nihai pipeline'ı geliştirme karesi t041 üzerinde göstermektedir. Ham görüntü çok karanlıktır
-(hücrelerin çoğu 0–30 aralığındadır); Gaussian filtre çekirdekçik ve gürültü dokusunu yumuşatır.
-T = 7 eşiği parlak hücreleri tam olarak ayırır, ancak görüntü merkezindeki soluk bir hücre küçük
-noktalara dağılmıştır. Closing ve delik doldurma hücre içi delikleri kapatır, distance transform
-her hücrenin merkezinde tek bir tepe üretir. Sonuçta 22 hücre bulunmuştur (referans 24). Eksik
-sayımın nedeni sağ alttaki iki çok soluk hücredir. Bunlar eşiğin altında kaldığı için hiç
-algılanamamıştır (kırmızı konturlar). Merkezdeki dağınık soluk hücre ise tek bir düzensiz nesne
-olarak sayılmıştır.
-
-**Kilitleme.** Bu parametreler `final_pipeline.json` dosyasına yazılmış, nihai pipeline ve baseline
-15 test karesinde referanslar okunmadan çalıştırılmış ve tahminler `test_predictions_locked.csv`
-dosyasına kaydedilmiştir. Her iki dosya, test referansları açılmadan önce ayrı bir commit ile
-GitHub'a yüklenmiştir. Notebook yeniden çalıştırıldığında kilitli dosyaların üzerine yazılmamakta,
-yeniden hesaplanan tahminlerin kilitli değerlerle birebir aynı olduğu doğrulanmaktadır.
-
-## 6. Bağımsız Test Sonuçları (16.6)
-
-Test referansları, kilit commit'i (`e075cc3`, 23.11.2026 13:05) GitHub'a gönderildikten sonra ilk
-kez okunmuştur. Değerlendirmede tahminler yeniden hesaplanmamış, doğrudan
-`test_predictions_locked.csv` dosyasından alınmıştır. Notebook kilit açılmadan önce dosyaların
-commit'lenmiş, değiştirilmemiş ve gönderilmiş olduğunu otomatik olarak kontrol etmektedir.
-
-**Tablo 4.** On beş test karesine ait gerçek ve tahmin edilen hücre sayıları.
-
-| Kare | Blok | Gerçek sayı | Baseline tahmini | Nihai tahmin | Baseline mutlak hata | Nihai mutlak hata |
-|---|---|---|---|---|---|---|
-| t042 | 1 | 27 | 36 | 23 | 9 | 4 |
-| t043 | 1 | 27 | 34 | 25 | 7 | 2 |
-| t044 | 1 | 26 | 37 | 23 | 11 | 3 |
-| t045 | 1 | 26 | 38 | 22 | 12 | 4 |
-| t046 | 1 | 28 | 43 | 24 | 15 | 4 |
-| t062 | 2 | 31 | 24 | 23 | 7 | 8 |
-| t063 | 2 | 30 | 24 | 23 | 6 | 7 |
-| t064 | 2 | 30 | 19 | 23 | 11 | 7 |
-| t065 | 2 | 30 | 25 | 24 | 5 | 6 |
-| t066 | 2 | 30 | 25 | 24 | 5 | 6 |
-| t086 | 3 | 29 | 18 | 25 | 11 | 4 |
-| t087 | 3 | 30 | 24 | 27 | 6 | 3 |
-| t088 | 3 | 30 | 23 | 24 | 7 | 6 |
-| t089 | 3 | 29 | 22 | 24 | 7 | 5 |
-| t090 | 3 | 28 | 20 | 24 | 8 | 4 |
-
-**Tablo 5.** Baseline ve nihai pipeline'ın test performans metrikleri (MAE, RMSE, Bias,
-Exact-count Accuracy, ortalama süre).
-
-| Yöntem | MAE | RMSE | Bias | Exact-count Accuracy | Ortalama süre (ms) |
-|---|---|---|---|---|---|
-| Baseline | 8,47 | 8,93 | −1,27 | 0,00 | 11 |
-| Nihai pipeline (D) | **4,87** | **5,14** | −4,87 | 0,00 | 223 |
-
-Nihai pipeline, test kümesinde baseline'ın hatasını %43 azaltmıştır (MAE 8,47 → 4,87; RMSE
-8,93 → 5,14). 15 karenin 11'inde nihai pipeline'ın hatası baseline'dan küçüktür; blok 2'de
-iki yöntemin MAE'si eşittir (6,8). Baseline'ın Bias değeri (−1,27) düşük görünse de bu, hataların
-birbirini götürmesinden kaynaklanmaktadır: blok 1'de 7–15 hücre fazla sayarken (gürültü ve
-parçalanma), blok 2 ve 3'te 5–11 hücre eksik saymaktadır. Nihai pipeline ise tutarlıdır: her karede
-eksik sayar ve Bias, MAE'ye eşittir. İki yöntem de hiçbir karede tam doğru sayım yapamamıştır.
-Nihai pipeline görüntü başına yaklaşık 223 ms sürmektedir; baseline'dan 20 kat yavaştır, ancak
-pratik kullanım için yeterince hızlıdır.
-
-### 6.1 Test ve doğrulama sonuçlarının karşılaştırılması
-
-| Pipeline D | Geliştirme (10 kare) | Doğrulama (5 kare) | Test (15 kare) |
-|---|---|---|---|
-| MAE | 1,70 | 0,80 | 4,87 |
-| RMSE | 1,82 | 1,10 | 5,14 |
-| Bias | −0,70 | 0,00 | −4,87 |
-
-Test hatası doğrulama hatasının yaklaşık 6 katıdır. Tanı ölçütleri hatanın türünü açıkça
-göstermektedir: kare başına 5,7 hücre kaçırılmakta, buna karşılık bölünme (0,27), birleşme (0) ve
-fazla nesne (0,6) neredeyse hiç yoktur. Segmentasyonun şekil ve ayırma aşamaları (closing, delik
-doldurma, watershed) test kümesinde de doğru çalışmaktadır; sorun yalnızca algılama, yani eşik
-aşamasındadır.
-
-Hata analizi (notebook Bölüm 13 (c)) bunun nedenini nicel olarak ortaya koymuştur. Her referans
-hücrenin, nihai pipeline'ın eşiği uyguladığı Gaussian 15×15 sonrası görüntüdeki ortalama parlaklığı
-ölçülmüştür:
-
-| Küme | Hücre | Parlaklık medyanı | T = 7 altındaki hücre oranı | Kaçırılan oran | Görüntü p99 |
+| Küme | Hücre | Parlaklık medyanı | T = 7 altındaki oran | Kaçırılan oran | Görüntü p99 |
 |---|---|---|---|---|---|
 | Geliştirme (Seq 01) | 227 | 29,3 | 0,12 | 0,09 | 68,5 |
 | Doğrulama (Seq 01) | 111 | 26,9 | 0,12 | 0,09 | 67,0 |
 | Test (Seq 02) | 431 | 10,0 | 0,20 | 0,20 | 29,8 |
 
-Seq 02'nin görüntüleri Seq 01'e göre yaklaşık 2–3 kat daha karanlıktır (hücre parlaklık medyanı
-29,3'e karşı 10,0; p99 68,5'e karşı 29,8). Kaçırılan hücrelerin tamamının parlaklığı 6,5'in altındadır;
-yani her kaçırma, sabit eşiğin (T = 7) altında kalan bir hücredir. Test kümesinde T = 7'nin altındaki
-hücre oranı (%20), kaçırılan hücre oranıyla (%20) birebir örtüşmektedir. Kaçırılan hücreler görselde de
-belirgindir (Ek A): çoğu, görüntünün üst ve kenar bölgelerindeki büyük, soluk ve odak dışı görünen hücrelerdir.
+<img src="figures/ekB4_parlaklik.png" style="width:100%">
 
-Bu sonuç, Bölüm 4.3 ve 5'te sınırlılık olarak belirtilen riskin gerçekleşmesidir: mutlak bir
-parlaklık değerine dayanan sabit eşik, Seq 01'in parlaklık ölçeğinde seçilmiş ve parlaklığı farklı
-bir sekansa genellenememiştir. Derste de vurgulandığı gibi, sabit eşik ancak görüntülerin
-histogramları birbirine benzetildiğinde (örneğin histogram eşleme ile) farklı görüntülere
-uygulanabilir. Doğrulama kümesi yalnızca Seq 01'den alındığı için bu farkı yakalayamamıştır;
-geliştirme ve doğrulama karelerinin aynı sekanstan gelmesi, doğrulamanın genelleme gücünü
-sınırlamıştır. Dokümanın kuralları gereği test sonuçları görüldükten sonra yöntem ve parametreler
-değiştirilmemiş, diğer aday pipeline'lar da test kümesinde çalıştırılmamıştır.
+**Şekil C.2.** Seq 01 ve Seq 02 hücre parlaklık dağılımları (sol) ve test kümesinde bulunan / kaçırılan hücreler (sağ). Kaçırılan hücrelerin tamamı T = 7 eşiğinin solundadır.
 
-### 6.2 Zamansal analiz
-
-Görüntüler bir videonun kareleridir. Her test bloğu, 5 ardışık kareden oluşan ayrı bir zaman segmenti
-olarak incelenmiştir. Bireysel hücre takibi yapılmamış; ancak referanstaki her sayım değişiminin
-nedeni, TRA etiketleri ve `man_track.txt` soy ağacı kullanılarak belirlenmiştir.
-
-**Şekil 5.** Üç test bloğu için gerçek ve tahmin edilen hücre sayılarının zamansal değişimi.
-
+#### C.3 Zamansal geçişler ve kaçırılan hücrelerin kalıcılığı
 | Geçiş | Δ gerçek | Δ baseline | Δ nihai | Gerçek değişimin nedeni |
 |---|---|---|---|---|
 | t042→t043 | 0 | −2 | +2 | – |
@@ -645,13 +754,6 @@ nedeni, TRA etiketleri ve `man_track.txt` soy ağacı kullanılarak belirlenmiş
 | t088→t089 | −1 | −1 | 0 | 1 hücre kayboldu |
 | t089→t090 | −1 | −2 | 0 | 1 hücre kayboldu |
 
-**Gerçek sayımdaki değişimler.** Gerçek hücre sayısı bloklar içinde yavaş değişmektedir (ortalama
-|Δ| 0,25–0,75, en fazla 2). Test bloklarında hiç bölünme gerçekleşmemiştir. Değişimlerin tamamı
-hücrelerin görüntüden kaybolması (5), bir süre görünmedikten sonra yeniden belirmesi (2) ya da görüş
-alanına yeni girmesi (1) ile açıklanmaktadır. Hücreler sıvı içinde üç boyutlu hareket ettiğinden odak
-düzleminin dışına çıkıp tekrar girebilmektedir; "yeniden belirme" olayları bunun doğrudan
-göstergesidir.
-
 **Baseline'ın zamansal tutarsızlığı.** Baseline ardışık karelerde 5–6 hücrelik sıçramalar yapmaktadır
 (t063→t064: −5, t064→t065: +6, t086→t087: +6). Gerçek sayının bu kadar değişmesi biyolojik olarak
 mümkün değildir. Değişimin yönü yalnızca geçişlerin %25–75'inde gerçek değişimle uyuşmaktadır. Bu
@@ -659,207 +761,6 @@ sıçramalar, global Otsu eşiğinin kareden kareye değişen histograma duyarl�
 kaynaklanmaktadır: eşik biraz yer değiştirdiğinde hücreler parçalanmakta ya da gürültü lekeleri
 nesne olarak sayılmaktadır.
 
-**Nihai pipeline'ın zamansal davranışı.** Nihai pipeline çok daha kararlıdır (ortalama |Δ| 0,25–1,75,
-en fazla 3). Blok 2'de tahmin neredeyse sabittir (23–24); ancak gerçek sayının 7 altında, paralel bir
-çizgi izlemektedir. Hücre kimliği bazındaki analiz, bu sabit farkın nedenini göstermektedir: bir
-karede kaçırılıp sonraki karede de bulunan 67 hücreden 66'sı (%99) sonraki karede de kaçırılmıştır.
-Hata rastgele değil sistematiktir; aynı soluk hücreler her karede kaçırılmaktadır (11 farklı hücre;
-13, 55, 61 ve 62 numaralı hücreler göründükleri her karede kaçırılmıştır). Kaçırılma, hücrelerin
-zamansal olaylarıyla da ilişkilidir. Yeniden belirdikleri ya da yeni girdikleri anda soluk olan
-hücreler (64, 66, 67) ilk karelerinden itibaren kaçırılmıştır. 20 numaralı hücre ise blok 1'de
-bulunurken t062'de kaçırılmış ve t063'te referanstan da kaybolmuştur; hücre odaktan çıkarken önce
-sönükleşmiş, sonra tamamen görünmez olmuştur.
+<img src="figures/ekB5_isi_haritasi.png" style="width:80%">
 
-Nihai tahmindeki ani değişimler gerçek değişimlerden değil, segmentasyon hatalarından
-kaynaklanmaktadır. t043 ve t087'deki +2'lik artışlar, bir hücrenin watershed ile yanlışlıkla ikiye
-bölünmesinden ve küçük parçaların fazla nesne olarak sayılmasından kaynaklanmaktadır. t087→t088'deki
-−3'lük düşüş ise bu sahte nesnelerin ortadan kalkması ve 32 numaralı hücrenin yalnızca t088'de
-kaçırılmasıyla açıklanmaktadır.
-
-**Zamansal karar stratejisi.** Ardışık karelerdeki bilgiyi kullanmak için iki kurallı bir strateji
-tanımlanmıştır. Parametreleri test sonuçlarından değil, yalnızca Seq 01'in soy ağacından
-belirlenmiştir:
-
-1. *Tutarlılık kontrolü:* Seq 01'in 92 karesinde gerçek sayı ardışık iki kare arasında en fazla 2
-   değişmiştir (83 geçişte 0, 7 geçişte ±1, 1 geçişte −2). Bu nedenle |Δ tahmin| > 2 olan geçişler
-   "şüpheli" olarak işaretlenir ve kullanıcıya bildirilir.
-2. *Zamansal medyan:* Her karenin sayımı, kendisi ve iki komşusunun (pencere 3) medyanıyla
-   düzeltilir. Tek bir karede oluşan sahte sıçramalar bu şekilde bastırılır.
-
-Strateji test bloklarına, kilitli tahminleri değiştirmeden ayrı bir analiz olarak uygulanmıştır.
-Tutarlılık kontrolü baseline'da 5 şüpheli geçiş yakalamış, nihai pipeline'da yalnızca 1 (t087→t088).
-Zamansal medyan, tahminlerin kareden kareye titremesini belirgin biçimde azaltmıştır (ortalama |Δ|
-nihai: 1,08 → 0,33; baseline: 2,67 → 0,88; gerçek: 0,58). Ancak MAE'yi düzeltmemiştir (nihai:
-4,87 → 5,00; baseline: 8,47 → 7,83). Bu sonuç önemli bir ayrımı ortaya koymaktadır: zamansal
-yöntemler kareden kareye değişen rastgele hataları giderebilir, fakat her karede aynı hücrelerin
-kaçırılmasından doğan sistematik hatayı gideremez. Sistematik hata ancak algılama (eşikleme)
-aşamasında çözülebilir. Bu nedenle zamansal strateji, sayım doğruluğunu artıran bir yöntem olarak
-değil, segmentasyon hatalarını tespit eden ve sayım dizisini kararlı hale getiren bir kalite
-kontrol adımı olarak önerilmektedir.
-
-### 6.3 Başarılı, hatalı ve zorlayıcı örnekler
-
-Örnek bölgeler elle değil, nesnel bir ölçütle seçilmiştir. Her referans hücrenin çevresindeki
-260×260 piksellik pencerede doğru bulunan, kaçırılan ve bölünen hücreler sayılmış; ölçüte en iyi uyan
-pencere seçilmiştir.
-
-- **Başarılı (t062):** Görüntünün üst-orta bölgesindeki 7 hücrenin tamamı tek ve doğru nesneler
-  olarak bulunmuştur. Bu hücreler yeterince parlaktır; nesne sınırları hücre sınırını yakından
-  izlemektedir. Yalnızca koyu çekirdekçiği kenara yakın olan bir hücrede sınırda küçük bir girinti
-  oluşmuş, ancak sayım etkilenmemiştir.
-- **Hatalı (t062):** Sol üst bölgedeki 4 hücrenin hiçbiri bulunamamıştır. Bu hücreler gösterim için
-  parlatılmış görüntüde düzgün, yuvarlak ve gri nesneler olarak açıkça seçilebilmektedir; yani
-  görsel olarak "zor" değildir. Tek sorunları, mutlak parlaklıklarının T = 7 eşiğinin altında
-  kalmasıdır. Bu örnek, test hatasının neredeyse tamamını oluşturan durumu temsil etmektedir.
-- **Zorlayıcı (t043):** Ortadaki hücrenin parlaklığı eşiğe çok yakındır. Bu nedenle eşikleme hücreyi
-  bütün olarak değil, düzensiz ve birbirine dar boyunlarla bağlı parçalar hâlinde yakalamış;
-  closing bu parçaları tam birleştirememiş, watershed de sonucu iki nesneye ayırmıştır. Eşiğe yakın
-  parlaklıktaki hücreler, hem kaçırılma hem de bölünme hatalarının ortak kaynağıdır. Bu durum,
-  t043'teki +2'lik sahte sıçramayı da açıklamaktadır.
-
-**Şekil 6.** Başarılı, hatalı ve zorlayıcı sayım örneklerinin karşılaştırılması.
-
-## 7. Tartışma ve Sonuç (16.7)
-
-### 7.1 Deneysel sonuçların tartışılması
-
-Bu bölümde, ödev dokümanının 15. bölümündeki sorular nicel sonuçlar ve görsel örnekler birlikte
-değerlendirilerek cevaplanmıştır.
-
-**1. Hangi yoğunluk dönüşümleri daha başarılı olmuştur?** Baseline ile birlikte kullanıldığında en
-başarılı dönüşüm contrast stretching olmuştur (MAE 3,4 → 2,4); histogram eşleme en karanlık karedeki
-hatayı −13'ten −1'e indirmiştir. Gamma, logaritmik dönüşüm ve histogram eşitleme görsel olarak
-hücreleri en belirgin gösteren dönüşümler olmasına rağmen sayımı en çok bozanlar olmuştur (MAE
-41–460). Bu dönüşümler, piksellerin yarısının 0 olduğu histogramda Otsu eşiğini 0'a çekmektedir
-(Şekil 2). Tam pipeline içinde ise hiçbir yoğunluk dönüşümü yarar sağlamamıştır. CLAHE ve contrast
-stretching, mutlak bir taban eşiği kullanan blok bazlı Otsu ile birleştirildiğinde arka plan
-gürültüsünü güçlendirmiş ve MAE'yi 45–51'e çıkarmıştır (E37, E38). Bir yoğunluk dönüşümünün etkisi,
-dönüşümün kendisine değil, sonraki aşamaların onunla etkileşimine bağlıdır.
-
-**2. Filtreleme ve kernel boyutu seçimi sayım hatasını nasıl değiştirmiştir?** Kernel boyutu
-büyüdükçe gürültü bileşenleri (779 → 24) ve soluk hücrelerin parçalanması (bölünme 5,0 → 2,3)
-belirgin biçimde azalmıştır. Global Otsu ile kullanıldığında MAE yine de artmıştır; çünkü filtre,
-parçalanmanın gizlediği eksik sayımı açığa çıkarmıştır (Bölüm 4.2). Yerel eşikle birlikte
-kullanıldığında ise büyük kernel açıkça yararlıdır: tam pipeline'da Gaussian 15×15 yerine 9×9
-kullanılması MAE'yi 0,5'ten 1,2'ye çıkarmıştır (E39). Keskinleştirme filtreleri gürültüyü de
-güçlendirdiği için bu veri setinde uygun değildir. Median 9×9, Gaussian 15×15'e yakın sonuç vermiş
-(E40), ancak daha yavaştır.
-
-**3. Hangi segmentasyon yaklaşımı daha başarılı olmuştur?** Geliştirme kümesinde en başarılı yöntem
-blok bazlı Otsu (8×8 blok, taban eşik 4) olmuştur; kaçırılan hücre sayısını kare başına 7,9'dan
-0,8'e indirmiştir (Bölüm 4.3). Doğrulama kümesinde ise en düşük hatayı sabit eşik vermiştir
-(MAE 0,8). Adaptif eşik düşük MAE'ye rağmen hücreleri halka biçiminde parçalamıştır. Global Otsu ve
-Triangle bu veri setinin tek tepeli, uzun kuyruklu histogramına uygun değildir. Hangi yaklaşımın
-"en başarılı" olduğu, değerlendirmenin hangi veri kümesinde yapıldığına bağlı çıkmıştır. Bu durum
-aşağıda 6. soruda tartışılmıştır.
-
-**4. Morfolojik işlemlerin sırası ve yapılandırma elemanının boyutu sonuçları nasıl etkilemiştir?**
-Büyük yapılandırma elemanı (11×11) etkileri belirginleştirmiştir. Closing bölünmeyi sıfırlamış,
-dilation fazla nesneyi artırmış, erosion ve opening soluk hücreleri silmiştir. İşlem sırası
-değişmeli değildir: opening → closing MAE 1,2, closing → opening MAE 1,7 vermiştir (Şekil 3a). En
-önemli bulgu, işlemlerin birbirini hazırlamasıdır. Delik doldurma tek başına sayımı hiç
-değiştirmemiş, ancak watershed'den önce uygulandığında aşırı bölünmeyi önlemiştir. Ham maskede
-watershed MAE 1,4 verirken, closing ve delik doldurmadan sonra 0,7 vermiş; bölünme ve birleşme
-sıfıra inmiştir (Şekil 3b).
-
-**5. Hangi işlemler ölçülebilir performans iyileşmesi sağlamıştır?** Geliştirme MAE'sindeki en
-büyük iyileşme, global eşikten yerel ya da sabit eşiğe geçişte elde edilmiştir (Gaussian 15×15 +
-Otsu 5,5 → Blok Otsu 1,2 ya da sabit eşik 1,7). Sonraki iyileşmeler daha küçüktür: closing (1,2 →
-0,9), closing + delik doldurma + watershed (0,7), min. alan 100 (0,5). Notebook Bölüm 15 (b)'deki
-iyileşme zinciri grafiği bu adımları göstermektedir. Gaussian 15×15 filtrenin global Otsu ile
-kullanıldığında MAE'yi 3,4'ten 5,5'e çıkarması dikkat çekicidir. Filtre tek başına bir kötüleşme gibi
-görünse de, yerel ya da sabit eşikle birleştiğinde en büyük iyileşmenin ön koşulu olmuştur. Sabit
-eşik yolunda ise morfoloji ve watershed geliştirme MAE'sini değiştirmemiştir (1,7 → 1,7). Ancak
-hatanın yapısını değiştirmiştir: bölünme 0,4'ten 0'a inmiş, fazla nesne 2,9'dan 1,4'e düşmüştür
-(E17 ve E42 tanı ölçütleri). Aynı MAE'nin arkasında daha temiz bir segmentasyon vardır. Bazı "iyileşmeler" ise yalnızca görünürdedir.
-Erosion 11×11 (E24) ve adaptif eşik (E20) düşük MAE vermiş, ancak tanı ölçütleri bu değerlerin
-kaçırılan ve bölünen hücrelerin birbirini götürmesinden kaynaklandığını göstermiştir. Bu nedenle
-seçimlerde yalnızca MAE'ye değil, kaçırılan, bölünme, birleşme ve fazla nesne ölçütlerine de
-bakılmıştır.
-
-**6. Doğrulamada başarılı olan yöntem testte de başarılı olmuş mudur?** Kısmen. Pipeline D,
-doğrulamada en iyi aday olmuştur (MAE 0,8), testte ise MAE 4,87 ile doğrulamanın yaklaşık 6 katı
-hata vermiştir. Hatanın türü değişmemiştir: segmentasyonun şekil ve ayırma aşamaları testte de doğru
-çalışmış (bölünme 0,27, birleşme 0), ancak kare başına 5,7 hücre kaçırılmıştır. Doğrulama kümesi
-geliştirme kümesiyle aynı sekanstan (Seq 01) geldiği için, parlaklığı yaklaşık 2–3 kat düşük olan
-Seq 02'deki bu sorunu öngörememiştir. Aynı sekanstan alınan bir doğrulama kümesi, sekans içindeki
-aşırı uyumu (Pipeline A) yakalayabilmiş, sekanslar arası genellemeyi ise ölçememiştir.
-
-**7. Nihai pipeline baseline yönteminden daha iyi sonuç vermiş midir?** Evet. Üç veri grubunun
-üçünde de nihai pipeline baseline'dan daha iyidir. MAE geliştirmede 3,4'ten 1,7'ye, doğrulamada
-3,8'den 0,8'e, testte 8,47'den 4,87'ye inmiştir. Testte hata %43 azalmış ve 15 karenin 11'inde
-daha küçük hata elde edilmiştir. Nihai pipeline zamansal olarak da çok daha tutarlıdır: ardışık
-karelerdeki ortalama değişim baseline'da 2,67, nihai pipeline'da 1,08'dir (gerçek 0,58). Bunun
-bedeli işlem süresidir: kare başına 11 ms'ye karşı 223 ms.
-
-**8. Hatalı sayımların temel nedenleri nelerdir?** (i) *Soluk ve odak dışı hücreler:* Test
-hatasının neredeyse tamamı budur. Kaçırılan bütün hücrelerin parlaklığı eşiğin (T = 7) altındadır;
-aynı hücreler ardışık karelerde %99 oranında yeniden kaçırılmaktadır (Bölüm 6.2). (ii) *Eşiğe yakın
-parlaklıktaki hücreler:* Bu hücreler düzensiz parçalar hâlinde yakalanmakta ve watershed tarafından
-bölünebilmektedir (Şekil 6, zorlayıcı örnek). (iii) *Referansta işaretlenmemiş nesneler:* Görüntü
-kenarında kesilmiş hücreler ve bazı soluk nesneler TRA'da etiketsizdir; bunlar fazla sayım olarak
-görünür. (iv) *Global eşiğin kareden kareye değişmesi (baseline):* Ardışık karelerde 5–6 hücrelik
-sahte sıçramalara yol açmaktadır.
-
-**9. Yöntemin başka mikroskobik görüntülere uygulanmasında hangi sınırlamalar ortaya çıkabilir?**
-En önemli sınırlama, nihai pipeline'ın mutlak bir parlaklık eşiğine (T = 7) dayanmasıdır. Farklı
-mikroskop, pozlama süresi, boya yoğunluğu ya da aynı deneyin farklı bir sekansı bu eşiği
-geçersiz kılar; Seq 02 bunun somut örneğidir. Diğer parametreler de hücre boyutuna bağlıdır:
-Gaussian kernel, closing elemanı, `min_distance` = 25 ve min. alan 100, bu veri setinde ≈60 piksellik
-hücre çapı için seçilmiştir. Farklı büyütme ya da farklı hücre tiplerinde yeniden ayarlanmaları
-gerekir. Yöntem iki boyutludur ve odak dışındaki hücreleri yapısı gereği kaçırır. Ayrıca yoğun
-kümelenmiş hücrelerde distance transform tabanlı watershed, birbirine çok yaklaşmış hücreleri
-ayırmakta zorlanabilir.
-
-### 7.2 Sonuç
-
-Bu çalışmada, Fluo-N2DH-GOWT1 veri setinde klasik görüntü işleme yöntemleriyle hücre sayımı için
-43 kontrollü deney yapılmış, 4 aday pipeline oluşturulmuş ve doğrulama kümesinde en düşük MAE'yi
-veren Gaussian 15×15 → sabit eşik → closing → delik doldurma → watershed → min. alan pipeline'ı
-seçilmiştir. Nihai yöntem, bağımsız testte baseline'ın hatasını %43 azaltmış ve zamansal olarak
-çok daha tutarlı sayımlar üretmiştir. Ancak farklı parlaklıktaki ikinci sekansa tam olarak
-genellenememiş ve her karede ortalama 4,9 hücre eksik saymıştır.
-
-Başlıca bulgular şöyle özetlenebilir: (1) Bu veri setinde sayım hatasının asıl kaynağı gürültü
-değil, eşikleme aşamasıdır. (2) Morfolojik işlemlerin etkisi sıralarına bağlıdır ve watershed'den
-önce maskenin düzeltilmesi gereklidir. (3) Sayıma dayalı MAE, hataların birbirini götürmesi
-nedeniyle tek başına yanıltıcı olabilir; tanı ölçütleri ve görsel inceleme gereklidir. (4)
-Geliştirme kümesinde en iyi olan yöntem doğrulamada geriye düşebilir; bağımsız doğrulama ve test
-kümeleri bu nedenle vazgeçilmezdir. (5) Zamansal yöntemler rastgele hataları bastırabilir, ancak
-sistematik eksik sayımı düzeltemez.
-
-**Geliştirilebilecek yönler.** (i) Sabit eşik, görüntüler arası parlaklık farkını gideren bir
-normalizasyonla birleştirilmelidir. Örneğin histogram eşleme (E07) ya da görüntü başına arka plan
-ve hücre parlaklığına göre ölçeklenen bir eşik kullanılabilir. Bu, derste sabit eşik için önerilen
-koşuldur ve bu çalışmadaki genelleme sorununu doğrudan hedefler. (ii) Doğrulama kümesi birden
-fazla sekanstan oluşturulursa sekanslar arası genelleme seçim aşamasında ölçülebilir. (iii) Blok
-bazlı Otsu'da daha küçük bloklar ya da hücre başına yerel eşik, parlak ve soluk hücrelerin aynı
-blokta bulunması sorununu azaltabilir. (iv) Zamansal bilgi, yalnızca sayımın düzeltilmesinde değil,
-bir karede bulunan hücrenin komşu karelerde aranmasında da kullanılabilir. Bu yaklaşım, odaktan
-geçici olarak çıkan hücrelerin kaçırılmasını azaltabilir.
-
-## 8. Kaynakça (16.8)
-
-1. Cell Tracking Challenge, Fluo-N2DH-GOWT1 veri seti. https://celltrackingchallenge.net/2d-datasets/
-2. V. Ulman et al., "An objective comparison of cell-tracking algorithms," *Nature Methods*, 14, 1141–1152, 2017.
-3. M. Maška et al., "A benchmark for comparison of cell tracking algorithms," *Bioinformatics*, 30(11), 1609–1617, 2014.
-4. E. Bártová et al., "Recruitment of Oct4 protein to UV-damaged chromatin in embryonic stem cells," *PLoS ONE*, 6(12), e27954, 2011.
-5. N. Otsu, "A Threshold Selection Method from Gray-Level Histograms," *IEEE Trans. Systems, Man, and Cybernetics*, 9(1), 62–66, 1979.
-6. C. H. Li and C. K. Lee, "Minimum cross entropy thresholding," *Pattern Recognition*, 26(4), 617–625, 1993.
-7. G. W. Zack, W. E. Rogers and S. A. Latt, "Automatic measurement of sister chromatid exchange frequency," *J. Histochemistry & Cytochemistry*, 25(7), 741–753, 1977.
-8. K. Zuiderveld, "Contrast Limited Adaptive Histogram Equalization," in *Graphics Gems IV*, Academic Press, 474–485, 1994.
-9. L. Vincent and P. Soille, "Watersheds in digital spaces: an efficient algorithm based on immersion simulations," *IEEE Trans. Pattern Analysis and Machine Intelligence*, 13(6), 583–598, 1991.
-10. P. Soille, *Morphological Image Analysis: Principles and Applications*, 2nd ed., Springer, 2003.
-11. R. C. Gonzalez and R. E. Woods, *Digital Image Processing*, 4th ed., Pearson, 2018.
-12. G. Bradski, "The OpenCV Library," *Dr. Dobb's Journal of Software Tools*, 2000.
-13. S. van der Walt et al., "scikit-image: image processing in Python," *PeerJ*, 2, e453, 2014.
-14. P. Virtanen et al., "SciPy 1.0: fundamental algorithms for scientific computing in Python," *Nature Methods*, 17, 261–272, 2020.
-15. C. R. Harris et al., "Array programming with NumPy," *Nature*, 585, 357–362, 2020.
-
-## Ekler
-
-- Ek A: 15 test karesinin tamamının görsel sonuçları
-- Ek B: Ek deney tabloları ve şekiller
-  - B.1: Pipeline A'nın 10 geliştirme karesindeki çıktısı (notebook Bölüm 10 (b))
-  - B.2: Klasik ve interpolasyonlu Blok Otsu eşik haritaları (Bölüm 10 (c))
-  - B.3: Doğrulama tahmin grafiği ve Pipeline D'nin 5 doğrulama karesindeki çıktısı (Bölüm 11 (b))
+**Şekil C.3.** En az bir kez kaçırılan referans hücreler ve 15 test karesindeki durumları (kırmızı: kaçırıldı, yeşil: bulundu, beyaz: karede yok).
